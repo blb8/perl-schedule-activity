@@ -5,7 +5,7 @@ use warnings;
 use Ref::Util qw/is_arrayref is_hashref is_plain_hashref/;
 use Schedule::Activity::Node;
 
-our $VERSION='0.1.4';
+our $VERSION='0.1.0';
 
 sub buildConfig {
 	my (%base)=@_;
