@@ -29,6 +29,7 @@ sub validateConfig {
 	if(!is_hashref($config{node})) { push @errors,'Config is missing:  node'; $config{node}={} }
 	while(my ($k,$node)=each %{$config{node}}) {
 		if(!is_hashref($node)) { push @errors,"Node $k, Invalid structure"; next }
+		Schedule::Activity::Node::defaulting($node);
 		my @nerrors=Schedule::Activity::Node::validate(%$node);
 		if(@nerrors) { push @errors,map {"Node $k, $_"} @nerrors; next }
 		@invalids=grep {!defined($config{node}{$_})} @{$$node{next}//[]};
@@ -247,7 +248,9 @@ Values must be non-negative numbers.  All three values may be identical.  Note t
 
 The slack is the amount of time that could be reduced in an action before it would need to be removed/replaced in the schedule.  The buffer is the amount of time that could be added to an action before additional actions would be needed in the schedule.
 
-Future changes may support abbreviated time specifications, automatic slack/buffering, univeral slack/buffer ratios, and open-ended/relaxed slack/buffering.
+As of version 0.1.1, providing any time value will automatically set any missing values at the fixed ratios 3,4,5.  EG, specifying only C<tmmax=40> will set C<tmmin=24> and C<tmavg=32>.  If provided two time values, priority is given to C<tmavg> to set the third.
+
+Future changes may support adjusting these ratios, automatic slack/buffering, univeral slack/buffer ratios, and open-ended/relaxed slack/buffering.
 
 =head2 Messages
 

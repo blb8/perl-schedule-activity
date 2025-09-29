@@ -4,7 +4,7 @@
 
 =head2 Slack/buffer defaults
 
-Generally a user shouldn't need to provide any activity/action time other than the C<tmavg>.  Some default behavior should be used, either C<tmmax=1.1*tmavg>, perhaps a default buffering value used during configuration building, or passed as part of schedule building.  As a side benefit, having a value used during schedule building would permit relaxation during retries, and could be reported with the result.  User-configured cases where C<tmmax==tmavg> would never be adjusted.
+As of version 0.1.1, missing time values are set with ratios 3,4,5; see L<Schedule::Activity>.  As an improvement, support passing these ratios during configuration building.  Eventually it will be helpful to pass slack/buffer defaults as part of schedule building:  Having a value used during schedule building would permit relaxation during retries, and could be reported with the result.  This requires changing assumptions in the validators.
 
 =head2 Attributes
 
