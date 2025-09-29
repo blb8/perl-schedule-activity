@@ -262,7 +262,7 @@ The response from C<buildConfig> is:
   %schedule=(
     error=>['list of validation errors, if any',...],
     activities=>[
-      seconds, message],
+      [seconds, message],
       ..,
     ],
   )
