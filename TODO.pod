@@ -44,6 +44,24 @@ Actions can change states based on the path chosen.  Those states may affect cho
 
 Something of the form C<schedule-activity.pl --schedule=file.dumper --activity='600,name' --activity='300,name' ...> might be useful.
 
+=head2 Sample text to speech tool
+
+An HTML+Javascript solution utilizing Web text to speech already exists to handle reminders for schedules of the form C<hh:mm:ss message # comment> and could be provided in C<samples/>.
+
+=head2 Action limits
+
+As a special case of Attributes, a shortcut of the form C<limit=N> can be supported.  While the case C<limit=1> is not the primary/initial use case of the scheduler, it makes sense that some events would specifically never be repeated.  Implementation requires Attributes and Node filtering, above, so this is not the highest priority on the list.
+
+=head2 Imports for common patterns
+
+There are three use cases that cannot currently be provided as examples.
+
+First, something like a music playlist is similar to the base case here.  This is a "large number of random choices" but "each is very fixed in time length".  There are multiple potential actions to be randomized.  Music has attributes (mood).  Scheduling can be arranged in chunks (activities), so there are natural groupings for an arrangement.  Scheduling requires Action limits, above, so currently this is slightly difficult and/or requires a helper import mechanism to build the schedules.  Moreover, the slack/buffer mechanisms operate 'backwards', in the sense that music+pause periods are fixed and may be impossible to schedule within a fixed/given window of time (hence the common patterns of advertisements between songs and fade-in/out techniques).  It's not clear that an arithmetic equivalent of fading will ever be supported in this library.  Nevertheless, a "playlist import" type mechanism to build the configurations would be helpful.
+
+Second, something like holiday activities.  This is a "small number of choices" but "each is very fluid in length" and has C<limit=1>.  An import tool for this type of request should be rather easy, but Action limits are a prerequisite.
+
+Third, scheduling of paired events is not straightforward.  An example would be match-off lineups of N teams (eg fantasy leagues).  That is less a concern of temporal scheduling and more about uniformity in the lineup.  This is possible by running two simultaneous builders on the same configuration, with very fixed times, but may result in self-alignment of activities.  It's not clear that this type of scheduling will ever be supported in this library.
+
 =head1 Functional improvements
 
 =head2 Object interface
