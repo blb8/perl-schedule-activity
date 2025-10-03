@@ -3,7 +3,7 @@
 use strict;
 use warnings;
 use Schedule::Activity;
-use Test::More tests=>4;
+use Test::More tests=>6;
 
 subtest 'validation'=>sub {
 	plan tests=>2;
@@ -159,4 +159,60 @@ subtest 'cycles'=>sub {
 	ok($#{$schedule{activities}}>10,'Self-cycle');
 };
 
-# test, if times are zero, it can get stuck in an infinite loop
+subtest 'edge cases'=>sub {
+	plan skip_all=>'Pending min/max reachability reporting';
+	#
+	# If this falls into the spin branch, it will hang.
+	# Compiling/reachability should determine that the spin node can never exit, for example.
+	#
+	my %schedule;
+	%schedule=Schedule::Activity::buildSchedule(activities=>[[3000,'root']],configuration=>{node=>{
+		'root'=>{finish=>'terminate',next=>['cycle','spin'],tmmin=>0,tmavg=>0,tmmax=>0},
+		'spin' =>{tmmin=>0,tmavg=>0,tmmax=>0,next=>['spin']},
+		'cycle'=>{tmmin=>100,tmavg=>200,tmmax=>400,next=>['cycle','terminate']},
+		'terminate'=>{tmmin=>0,tmavg=>0,tmmax=>0},
+	}});
+	ok($#{$schedule{activities}}>10,'Spin node');
+};
+
+subtest 'Attributes'=>sub {
+	plan tests=>5;
+	my $rnd=sub { my ($x)=@_; return int($x*1e6)/1e6 };
+	my %schedule=Schedule::Activity::buildSchedule(activities=>[[15,'root']],configuration=>{node=>{
+		root=>{
+			next=>['step1'],
+			tmavg=>5,
+			finish=>'finish',
+			attributes=>{
+				counter=>{incr=>1},
+				score  =>{set=>5},
+				enabled=>{set=>1},
+			},
+		},
+		'step1'=>{
+			tmavg=>5,
+			next=>['finish'],
+			attributes=>{
+				counter=>{incr=>1},
+				score  =>{incr=>4},
+				enabled=>{set=>0},
+			},
+		},
+		'finish'=>{
+			tmavg=>5,
+			attributes=>{
+				counter=>{incr=>1},
+			},
+		}},
+		attributes=>{
+			counter=>{type=>'int',value=>0},
+			enabled=>{type=>'bool'},
+		},
+	});
+	is($#{$schedule{attributes}{score}{xy}},                2,'Score:  N');
+	is(&$rnd($schedule{attributes}{score}{avg}),  &$rnd(25/3),'Score:  avg');
+	is($#{$schedule{attributes}{enabled}{xy}},              2,'Enabled:  N');
+	is(&$rnd($schedule{attributes}{enabled}{avg}),&$rnd( 1/3),'Enabled:  avg');
+	is($schedule{attributes}{counter}{y},                   3,'Counter:  count');
+};
+

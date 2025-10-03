@@ -2,6 +2,7 @@ Revision history for Schedule::Activity
 
 0.1.1 - 2025-..-..
 	- Set missing time values with a 3,4,5 ratio
+	- Attributes for activity/action nodes, reported via buildSchedule
 	- Add samples
 
 0.1.0 - 2025-09-28

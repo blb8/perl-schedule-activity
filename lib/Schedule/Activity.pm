@@ -3,6 +3,7 @@ package Schedule::Activity;
 use strict;
 use warnings;
 use Ref::Util qw/is_arrayref is_hashref is_plain_hashref/;
+use Schedule::Activity::Attributes;
 use Schedule::Activity::Node;
 
 our $VERSION='0.1.0';
@@ -24,13 +25,21 @@ sub buildConfig {
 }
 
 sub validateConfig {
-	my (%config)=@_;
+	my ($attr,%config)=@_;
 	my (@errors,@invalids);
 	if(!is_hashref($config{node})) { push @errors,'Config is missing:  node'; $config{node}={} }
+	if($config{attributes}) {
+		if(!is_hashref($config{attributes})) { push @errors,'Attributes invalid structure' }
+		else { while(my ($k,$v)=each %{$config{attributes}}) { push @errors,$attr->register($k,%$v) } }
+	}
 	while(my ($k,$node)=each %{$config{node}}) {
 		if(!is_hashref($node)) { push @errors,"Node $k, Invalid structure"; next }
 		Schedule::Activity::Node::defaulting($node);
 		my @nerrors=Schedule::Activity::Node::validate(%$node);
+		if($$node{attributes}) {
+			if(!is_hashref($$node{attributes})) { push @nerrors,"attributes, Invalid structure" }
+			else { while(my ($k,$v)=each %{$$node{attributes}}) { push @nerrors,$attr->register($k,%$v) } }
+		}
 		if(@nerrors) { push @errors,map {"Node $k, $_"} @nerrors; next }
 		@invalids=grep {!defined($config{node}{$_})} @{$$node{next}//[]};
 		if(@invalids) { push @errors,"Node $k, Undefined name in array:  next" }
@@ -130,24 +139,37 @@ sub scheduler {
 		$res[$i][2]=$dt-($res[$i][1]{tmmin}//0);
 		$res[$i][3]=($res[$i][1]{tmmax}//0)-$dt;
 	}
+	#
+	# This works for global attribute reporting, but note that findpath will
+	# need updated to support node filtering by attribute.  In particular,
+	# a fully built result in this step may need to be completely abandoned
+	# if a node filter encounters a violation.  Filtering will only be possible
+	# if attributes are used to filter node->nextrandom
+	#
+	foreach my $item (grep {$$_[1]{attributes}} @res) {
+		while(my ($k,$v)=each %{$$item[1]{attributes}}) {
+			$opt{attr}->change($k,%$v,tm=>$$item[0]+$opt{tmoffset}) } }
 	return @res;
 }
 
 sub buildSchedule {
 	my (%opt)=@_;
+	my $attr=Schedule::Activity::Attributes->new();
 	if(!is_hashref($opt{configuration})) { $opt{configuration}={} }
 	if(!is_arrayref($opt{activities}))   { $opt{activities}=[] }
-	my @errors=validateConfig(%{$opt{configuration}});
+	my @errors=validateConfig($attr,%{$opt{configuration}});
 	if(@errors) { return (error=>\@errors) }
 	my %config=buildConfig(%{$opt{configuration}});
 	#
 	my ($tmoffset,%res)=(0);
 	foreach my $activity (@{$opt{activities}}) {
-		foreach my $entry (scheduler(goal=>$$activity[0],node=>$config{node}{$$activity[1]},config=>\%config)) {
+		foreach my $entry (scheduler(goal=>$$activity[0],node=>$config{node}{$$activity[1]},config=>\%config,attr=>$attr,tmoffset=>$tmoffset)) {
 			push @{$res{activities}},[$$entry[0]+$tmoffset,@$entry[1..$#$entry]];
 		}
 		$tmoffset+=$$activity[0];
+		$attr->log($tmoffset); # potentially overwritten by subsequent nodes
 	}
+	%{$res{attributes}}=$attr->report();
 	return %res;
 }
 
@@ -213,8 +235,9 @@ A configuration for scheduling contains the following sections:
 
   %configuration=(
     node=>{...}
-    message  =>... # not yet supported
-    insertion=>... # not yet supported
+    attributes=>... # see below
+    message  =>...  # not yet supported
+    insertion=>...  # not yet supported
   )
 
 Both activities and actions are configured as named C<node> entries.  With this structure, an action and activity can share a C<message>, but must use different key names.  
@@ -224,11 +247,13 @@ Both activities and actions are configured as named C<node> entries.  With this 
     next=>[...], # list of child node names
     finish=>'activity conclusion',
     (time specification)
+    (attributes specification)
   }
   'action name'=>{
     message=>... # an optional message string or object
     next=>[...], # list of child node names
     (time specification)
+    (attributes specification)
   }
 
 The list of C<next> nodes is a list of names, which must be defined in the configuration.  During schedule construction, entries will be I<chosen randomly> from the list of C<next> nodes.  The conclusion must be reachable from the initial activity, or scheduling will fail.  There is no further restriction on the items in C<next>:  Scheduling specifically supports cyclic/recursive actions, including self-cycles.
@@ -260,7 +285,7 @@ Future changes may support an array of messages, with each entry being a string 
 
 =head1 RESPONSE
 
-The response from C<buildConfig> is:
+The response from C<buildSchedule> is:
 
   %schedule=(
     error=>['list of validation errors, if any',...],
@@ -268,6 +293,14 @@ The response from C<buildConfig> is:
       [seconds, message],
       ..,
     ],
+    attributes=>{
+      name=>{
+        y  =>(final value),
+        xy =>[[tm,value],...],
+        avg=>(average, depends on type),
+      },
+      ...
+    }
   )
 
 =head2 Failures
@@ -277,6 +310,79 @@ In addition to validation failures returned through C<error>, the following may 
 The difference between the result time and the goal may cause retries when an excess exceeds the available slack, or when a shortage exceeds the available buffer.
 
 Caution:  While startup/conclusion of activities may have fixed time specifications, at this time it is recommended that actions always contain some slack/buffer.  There is currently no "relaxing mechanism" during scheduling, so a configured with no slack nor buffer must exactly meet the goal time requested.
+
+=head1 ATTRIBUTES
+
+Attributes permit tracking boolean or numeric values during schedule construction.  The result of C<buildSchedule> contains attribute information that can be used to verify or adjust the schedule.
+
+=head2 Types
+
+The two types of attributes are C<bool> or C<int>, which is the default.  A boolean attribute is primarily used as a state flag.  An integer attribute can be used both as a counter or gauge, that is either to track the number of occurrences of an activity or event, or to log varying numeric values.
+
+=head2 Configuration
+
+Multiple attributes can be referenced from any activity/action.  For example:
+
+  'activity/action name'=>{
+    attributes=>{
+      temperature=>{set=>value, incr=>value, decr=>value, note=>'comment'},
+      counter    =>{set=>value, incr=>value, note=>'comment'},
+      flag       =>{set=>0/1, note=>'comment'},
+    },
+  }
+
+Any attribute may include a C<note> for convenience, but this value is not stored or reported.  It is only for convenience.
+
+The main configuration can also declare attribute names and starting values.  It is recommended to set any non-zero initial values in this fashion, since calling C<set> requires that activity to always be the first requested in the schedule.  Boolean values must be declared in this section:
+
+  %configuration=(
+    attributes=>{
+      flagA  =>{type=>'bool'},
+      flagB  =>{type=>'bool', value=>1},
+      counter=>{type=>'int', value=>0},
+    },
+  )
+
+Attributes are verified before schedule construction, which will fail if an attribute name is referenced in a conflicting manner by different actions.
+
+=head2 Response values
+
+The response from C<buildSchedule> includes an C<attributes> section as:
+
+  attributes=>{
+    name=>{
+      y  =>(final value),
+      xy =>[[tm,value],...],
+      avg=>(average, depends on type),
+    },
+    ...
+  }
+
+One key is included for each attribute declared in the C<%configuration> section or within an activity.  If an activity containing a unique attribute is not used during construction, the attribute will still be included in the response with its default and initial value.
+
+The C<y> value is the final value at the conclusion of the final activity in the schedule.  The C<xy> contains an array of all values and the times at which they changed; see Logging.  The C<avg> is roughly the time-weighted average of the value, but this depends on the attribute type.
+
+=head2 Integer attributes
+
+The C<int> type is the default for attributes.  If initialized in C<%configuration>, it may specify the type, or the value, or both.  The default value is zero, but this may be overwritten if the first activity node specifically calls C<set>.
+
+Integer attributes within activity/actions support all of:  C<set>, C<incr>, C<decr>.  There is no current restriction on values; they may be integers or real numbers, positive or negative.
+
+The reported C<avg> is the overall time-weighted average of the values, computed via a trapezoid rule.  That is, if C<tm=0, value=2> and C<tm=10, value=12>, the average is 7 with a weight of 10.  See Logging for more details about averages over activity boundaries.
+
+=head2 Boolean attributes
+
+The C<bool> type must be declared in C<%configuration>.  The value may be specified, but defaults to zero/false.
+
+Boolean attributes within activity/actions support:  C<set>.  Currently there is no restriction on values, but the behavior is only defined for values 0/1.
+
+The reported C<avg> is the percentage of time in the schedule for which the flag was true.  That is, if C<tm=0, value=0>, and C<tm=7, value=1>, and C<tm=10, value=1> is the complete schedule, then the reported average for the boolean will be C<0.3>.
+
+=head2 Logging
+
+The reported C<xy> is an array of values of the form C<(tm, value)>, with each representing an activity/action referencing that attribute built into the schedule.  Each attribute will have its initial value of C<(0, value)>, either the default or the value specified in C<configuration{attributes}>.
+
+Undecided behavior:  As of version 0.1.1, attribute logging will also occur at the end of every activity, so changes in attributes across activity boundaries do not affect the average value calculation.  In particular, the starting value in any given activity is the most recent value in the previous activity, adjusted by any operator in the activity node itself.  For example, suppose two activities go from C<tm=0> to 10, and from C<tm=10> to 20.  If an attribute is set to C<tm=0, value=5> and not set again until C<tm=15, value=0>, then the average in the first activity is five.
 
 =head1 SEE ALSO
 
