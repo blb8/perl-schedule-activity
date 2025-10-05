@@ -238,11 +238,11 @@ Version 0.1.0
 
 =head1 DESCRIPTION
 
-EXPERIMENTAL:  This module is currently experimental and subject to change.  Core functionality is safe for use in this version, but there are still some exceptional cases that may C<die()>; callers should plan to trap and handle these exceptions accordingly.  Documentation per option below may note other areas subject to change.
-
 This module permits building schedules of I<activities> each containing randomly-generated lists of I<actions>.  This two-level approach uses explicit I<goal> times to construct the specified list of activities.  Within activities, actions are chosen within configured limits, possibly with randomization and cycling, using I<slack> and I<buffer> timing adjustments to achieve the goal.
 
 For additional examples, see the C<samples/> directory.
+
+EXPERIMENTAL:  This module is currently experimental and subject to change.  Core functionality is safe for use in this version, but there are still some exceptional cases that may C<die()>; callers should plan to trap and handle these exceptions accordingly.  Documentation per option below may note other areas subject to change.
 
 =head1 CONFIGURATION
 
@@ -255,7 +255,7 @@ A configuration for scheduling contains the following sections:
     insertion=>...  # not yet supported
   )
 
-Both activities and actions are configured as named C<node> entries.  With this structure, an action and activity can share a C<message>, but must use different key names.  
+Both activities and actions are configured as named C<node> entries.  With this structure, an action and activity might have the same C<message>, but must use different key names.
 
   'activity name'=>{
     message=>... # an optional message string or object
@@ -294,9 +294,21 @@ Future changes may support adjusting these ratios, automatic slack/buffering, un
 
 =head2 Messages
 
-Each activity/action node may contain an optional message string.  Nothing in the scheduler uses these messages; they are provided so the caller can easily handle the returned schedules.
+Each activity/action node may contain an optional message.  Messages are provided so the caller can easily format the returned schedules, but nothing in the scheduled uses these messages.  Messages may be:
 
-Future changes may support an array of messages, with each entry being a string or object.  This would support configured random message selection.  A message hash may also be supported.  One proposal links the string in the C<message>, to the collection of top-level C<configuration{message}> keys; while this structure has not been fully defined, carefully choose message strings that are unlikely to clash with potential future keynames.
+  message=>'A message string'
+  message=>['An array','of alternates','chosen randomly']
+  message=>{
+    alternates=>[
+      {message=>'A hash containing an array', attributes=>{...}}
+      {message=>'of alternates',              attributes=>{...}}
+      {message=>'with optional attributes',   attributes=>{...}}
+    ]
+  }
+
+Message selection is randomized for arrays and a hash of alternates.  Any attributes are emitted with the attribute response values, described below.
+
+One proposal links the string in the C<message> to the collection of top-level C<configuration{message}> keys, to support better message reuse across activities.  While this structure has not been fully defined, carefully choose message strings that are unlikely to clash with potential future keynames.
 
 =head1 RESPONSE
 
