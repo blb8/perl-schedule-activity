@@ -16,7 +16,7 @@ As of version 0.1.1, messages can be strings, arrays, or a hash of alternates.  
 
 =head2 Flat configurations
 
-If possible, support loading of configuration from a Markdown-styled nested listed, with activities as the outermost level and actions at level two.  This only works when all actions are 'equal' and can occur repeatedly in any order.  The concluding action for each activity would be automatic in this case.
+As of version 0.1.1, basic Markdown can be imported via C<Activity::loadMarkdown> and supports randomization, and time specifications for activities and actions.
 
 =head2 Convenience, min/max/valid reporting functions
 

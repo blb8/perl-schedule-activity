@@ -3,7 +3,7 @@
 use strict;
 use warnings;
 use Schedule::Activity;
-use Test::More tests=>8;
+use Test::More tests=>9;
 
 subtest 'validation'=>sub {
 	plan tests=>2;
@@ -297,5 +297,40 @@ subtest 'Message attributes'=>sub {
 	is_deeply($schedule{attributes}{activity}{xy},[[0,1],[25,2],[30,2]],'Activities');
 	is_deeply($schedule{attributes}{action}{xy},  [[0,0],[5,1],[15,2],[30,2]],'Actions');
 	is_deeply($schedule{attributes}{messages}{xy},[[0,1],[5,2],[15,3],[25,4],[30,4]],'Messages');
+};
+
+subtest 'Markdown loading'=>sub {
+	plan tests=>7;
+	my %settings=Schedule::Activity::loadMarkdown(q|
+1. Group one, 5min
+	1. action one, 1min
+  - action two, 2min
+ * action three, 3min
+-  Group two, 5min
+	* action one, 3min
+	* action two, 2min
+	* action three, 1min
+*  Group three, 5min
+	* action one, 2min
+	* action two, 3min
+	* action three, 1min
+	|);
+	my %schedule=Schedule::Activity::buildSchedule(%settings);
+	my @materialized=map {[$$_[0],$$_[1]{message}]} @{$schedule{activities}};
+	my @expect=(
+		[  0,qr/Group one/],
+		[  0,qr/action (one|two|three)/],
+		[300,qr/Group two/],
+		[300,qr/action (one|two|three)/],
+		[600,qr/Group three/],
+		[600,qr/action (one|two|three)/],
+		[900,qr/^$/], # group three conclude
+	);
+	my $i=0;
+	foreach my $match (@expect) {
+		while(($i<$#materialized)&&($materialized[$i][0]<$$match[0])) { $i++ }
+		if(($materialized[$i][1]!~$$match[1])&&($i<$#materialized)&&($materialized[$i][0]==$materialized[1+$i][0])) { $i++ }
+		like($materialized[$i][1],$$match[1],"At $$match[0], $$match[1]");
+	}
 };
 

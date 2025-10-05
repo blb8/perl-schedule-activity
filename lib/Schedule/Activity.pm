@@ -188,6 +188,48 @@ sub buildSchedule {
 	return %res;
 }
 
+sub loadMarkdown {
+	my ($text)=@_;
+	my $list=qr/(?:\d+\.|[-*])/;
+	my (%config,@activities,@siblings,$activity,$tm);
+	foreach my $line (split(/\n/,$text)) {
+		if($line=~/^\s*$/) { next }
+		if($line=~/^$list\s*(.*)$/) {
+			$activity=$1; $tm=0;
+			if($activity=~/(?<name>.*?),\s*(?<tm>\d+)(?<unit>min|sec)\s*$/) {
+				$activity=$+{name}; $tm=$+{tm}; if($+{unit} eq 'min') { $tm*=60 } }
+			if(defined($config{node}{$activity})) { die "Name conflict:  $activity" }
+			push @activities,[$tm,$activity];
+			@siblings=();
+			$config{node}{$activity}={
+				message=>$activity,
+				next=>[],
+				tmavg=>0,
+				finish=>"$activity, conclude",
+			};
+			$config{node}{"$activity, conclude"}={tmavg=>0};
+		}
+		elsif($line=~/^\s+$list\s*(.*)$/) {
+			if(!$activity) { die 'Action without activity' }
+			my $action=$1; $tm=60;
+			if($action=~/(?<name>.*?),\s*(?<tm>\d+)(?<unit>min|sec)\s*$/) {
+				$action=$+{name}; $tm=$+{tm}; if($+{unit} eq 'min') { $tm*=60 } }
+			$action="$activity, $action";
+			push @{$config{node}{$activity}{next}},$action;
+			$activities[-1][0]||=$tm;
+			if(defined($config{node}{$action})) { die "Name conflict:  $action" }
+			$config{node}{$action}={
+				message=>$action,
+				next=>[@siblings,"$activity, conclude"],
+				tmavg=>$tm,
+			};
+			foreach my $sibling (@siblings) { push @{$config{node}{$sibling}{next}},$action }
+			push @siblings,$action;
+		}
+	}
+	return (configuration=>\%config,activities=>\@activities);
+}
+
 1;
 
 __END__
@@ -410,6 +452,29 @@ The reported C<avg> is the percentage of time in the schedule for which the flag
 The reported C<xy> is an array of values of the form C<(tm, value)>, with each representing an activity/action referencing that attribute built into the schedule.  Each attribute will have its initial value of C<(0, value)>, either the default or the value specified in C<configuration{attributes}>.
 
 Undecided behavior:  As of version 0.1.1, attribute logging will also occur at the end of every activity, so changes in attributes across activity boundaries do not affect the average value calculation.  In particular, the starting value in any given activity is the most recent value in the previous activity, adjusted by any operator in the activity node itself.  For example, suppose two activities go from C<tm=0> to 10, and from C<tm=10> to 20.  If an attribute is set to C<tm=0, value=5> and not set again until C<tm=15, value=0>, then the average in the first activity is five.
+
+=head1 IMPORT MECHANISMS
+
+=head2 Markdown
+
+Rudimentary markdown support is included for lists of actions that are all equally likely for a given activity:
+
+  * Activity One, 5min
+    - Action one, 1min
+    - Action two, 2min
+    - Action three, 3min
+  2. Activity Two, 5min
+    * Action one, 1min
+    * Action two, 2min
+    * Action three, 3min
+  - Activity Three, 5min
+    * Action one, 5min
+
+Any list identification markers may be used interchangably (number plus period, asterisks, hyphen).  One or more leading whitespace (tabs or spaces) indicates an action; otherwise the line indicates an activity.  Times are specified as C<\d+min> or C<\d+sec>.  If only a single action is included in an activity, its configured time should be equal to the activity time.
+
+The imported configuration permits an activity to be followed by any of its actions, and any action can be followed by any other action within the activity (but not itself).  Any action can terminate the activity.
+
+The full settings needed to build a schedule can be loaded with C<%settings=loadMarkdown(text)>, and both C<$settings{configuration}> and C<$settings{activities}> will be defined so an immediate call to C<%schedule=buildSchedule(%settings)> can be made.
 
 =head1 SEE ALSO
 
