@@ -476,6 +476,10 @@ The imported configuration permits an activity to be followed by any of its acti
 
 The full settings needed to build a schedule can be loaded with C<%settings=loadMarkdown(text)>, and both C<$settings{configuration}> and C<$settings{activities}> will be defined so an immediate call to C<%schedule=buildSchedule(%settings)> can be made.
 
+=head1 BUGS
+
+It is possible for some settings to get stuck in an infinite loop:  Be cautious setting C<tmavg=0> for actions.
+
 =head1 SEE ALSO
 
 L<Schedule::LongSteps> and L<Chronic> address the same type of schedules with slightly different goals.
