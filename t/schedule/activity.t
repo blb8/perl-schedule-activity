@@ -3,7 +3,7 @@
 use strict;
 use warnings;
 use Schedule::Activity;
-use Test::More tests=>6;
+use Test::More tests=>8;
 
 subtest 'validation'=>sub {
 	plan tests=>2;
@@ -48,7 +48,7 @@ subtest 'Simple scheduling'=>sub {
 				finish=>'Activity, conclude',
 			},
 			'action 1'=>{
-				message=>'Begin action 1',
+				message=>['Begin action 1'],
 				tmmin=>5,tmavg=>10,tmmax=>15,
 				next=>['action 2'],
 			},
@@ -214,5 +214,88 @@ subtest 'Attributes'=>sub {
 	is($#{$schedule{attributes}{enabled}{xy}},              2,'Enabled:  N');
 	is(&$rnd($schedule{attributes}{enabled}{avg}),&$rnd( 1/3),'Enabled:  avg');
 	is($schedule{attributes}{counter}{y},                   3,'Counter:  count');
+};
+
+subtest 'Message randomization'=>sub {
+	plan tests=>2;
+	my %schedule;
+	my %configuration=(
+		node=>{
+			Activity=>{
+				message=>[map {'act0.'.$_} (0..3)],
+				next=>['action 1'],
+				tmmin=>5,tmavg=>5,tmmax=>5,
+				finish=>'Activity, conclude',
+			},
+			'action 1'=>{
+				message=>[map {'act1.'.$_} (0..3)],
+				tmmin=>5,tmavg=>10,tmmax=>15,
+				next=>['action 2'],
+			},
+			'action 2'=>{
+				message=>[map {'act2.'.$_} (0..3)],
+				tmmin=>5,tmavg=>10,tmmax=>15,
+				next=>['Activity, conclude'],
+			},
+			'Activity, conclude'=>{
+				message=>[map {'act3.'.$_} (0..3)],
+				tmmin=>5,tmavg=>5,tmmax=>5,
+			},
+		},
+	);
+	my %seen;
+	foreach (1..4*4*100) {
+		%schedule=Schedule::Activity::buildSchedule(configuration=>\%configuration,activities=>[[30,'Activity']]);
+		foreach my $msg (map {$$_[1]{message}} @{$schedule{activities}}) { $seen{$msg}=1 }
+	}
+	my %expect;
+	foreach my $i (0..3) {
+	foreach my $j (0..3) {
+		$expect{"act$i.$j"}=1;
+	} }
+	is_deeply(\%seen,\%expect,'All combinations observed');
+	is_deeply($configuration{node}{Activity}{message},[map {'act0.'.$_} (0..3)],'verify non-mutation of configuration');
+};
+
+subtest 'Message attributes'=>sub {
+	plan tests=>3;
+	my %schedule;
+	my %configuration=(
+		node=>{
+			Activity=>{
+				message=>{alternates=>[{message=>'Activity',attributes=>{messages=>{incr=>1}}}]},
+				next=>['action 1'],
+				tmmin=>5,tmavg=>5,tmmax=>5,
+				finish=>'Activity, conclude',
+				attributes=>{activity=>{incr=>1}},
+			},
+			'action 1'=>{
+				message=>{alternates=>[{message=>'Activity',attributes=>{messages=>{incr=>1}}}]},
+				tmmin=>5,tmavg=>10,tmmax=>15,
+				next=>['action 2'],
+				attributes=>{action=>{incr=>1}},
+			},
+			'action 2'=>{
+				message=>{alternates=>[{message=>'Activity',attributes=>{messages=>{incr=>1}}}]},
+				tmmin=>5,tmavg=>10,tmmax=>15,
+				next=>['Activity, conclude'],
+				attributes=>{action=>{incr=>1}},
+			},
+			'Activity, conclude'=>{
+				message=>{alternates=>[{message=>'Activity',attributes=>{messages=>{incr=>1}}}]},
+				tmmin=>5,tmavg=>5,tmmax=>5,
+				attributes=>{activity=>{incr=>1}},
+			},
+		},
+		attributes=>{
+			messages=>{type=>'int',value=>0},
+			activity=>{type=>'int',value=>0},
+			action  =>{type=>'int',value=>0},
+		},
+	);
+	%schedule=Schedule::Activity::buildSchedule(configuration=>\%configuration,activities=>[[30,'Activity']]);
+	is_deeply($schedule{attributes}{activity}{xy},[[0,1],[25,2],[30,2]],'Activities');
+	is_deeply($schedule{attributes}{action}{xy},  [[0,0],[5,1],[15,2],[30,2]],'Actions');
+	is_deeply($schedule{attributes}{messages}{xy},[[0,1],[5,2],[15,3],[25,4],[30,4]],'Messages');
 };
 

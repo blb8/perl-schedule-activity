@@ -4,6 +4,7 @@ use strict;
 use warnings;
 use Ref::Util qw/is_arrayref is_hashref is_plain_hashref/;
 use Schedule::Activity::Attributes;
+use Schedule::Activity::Message;
 use Schedule::Activity::Node;
 
 our $VERSION='0.1.0';
@@ -20,6 +21,7 @@ sub buildConfig {
 		if(@nexts) { $$node{next}=\@nexts }
 		else       { delete($$node{next}) }
 		if(defined($$node{finish})) { $$node{finish}=$res{node}{$$node{finish}} }
+		$$node{msg}=Schedule::Activity::Message->new(message=>$$node{message});
 	}
 	return %res;
 }
@@ -138,6 +140,19 @@ sub scheduler {
 		else         { $dt=$opt{goal}-$res[$i][0] }
 		$res[$i][2]=$dt-($res[$i][1]{tmmin}//0);
 		$res[$i][3]=($res[$i][1]{tmmax}//0)-$dt;
+	}
+	#
+	# Materialize the messages and their attributes.
+	# This works for global attribute reporting, but note that findpath will
+	# need updated to support node filtering by attribute.  In particular,
+	# messages will need to be materialized when chosen, since they may
+	# after later node selection.
+	foreach my $node (@res) {
+		my $msg;
+		($$node[1]{message},$msg)=$$node[1]{msg}->random();
+		if(is_hashref($msg)) { while(my ($k,$v)=each %{$$msg{attributes}}) {
+			$opt{attr}->change($k,%$v,tm=>$$node[0]+$opt{tmoffset});
+		} }
 	}
 	#
 	# This works for global attribute reporting, but note that findpath will

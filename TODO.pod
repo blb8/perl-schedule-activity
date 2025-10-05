@@ -12,7 +12,7 @@ As of version 0.1.1, attributes are available in activity/action configurations 
 
 =head2 Multimessage support
 
-A message string only contains the announcement message, but a message array signals customized structures.  If an entry in the array is a scalar, it would be a regular text message.  If the entry is a hash, it would be of the form C<{message=E<gt>'the message',attribute=E<gt>{attribute=E<gt>value}>.  Messages would be chosen randomly, except with filters or searching, which may narrow the selection based on attributes.
+As of version 0.1.1, messages can be strings, arrays, or a hash of alternates.  Messages are chosen randomly.  Message attributes are reported with the overall attribute results from C<buildSchedule>.  Attributes may be used in the future for filtering and searching.
 
 =head2 Flat configurations
 
