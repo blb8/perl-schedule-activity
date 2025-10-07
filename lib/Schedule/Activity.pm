@@ -15,6 +15,7 @@ sub buildConfig {
 	while(my ($k,$node)=each %{$base{node}}) {
 		if(is_plain_hashref($node)) { $res{node}{$k}=Schedule::Activity::Node->new(%$node) }
 		else { $res{node}{$k}=$node }
+		$res{node}{$k}{keyname}=$k;
 	}
 	while(my ($k,$node)=each %{$res{node}}) {
 		my @nexts=map {$res{node}{$_}} @{$$node{next}//[]};
