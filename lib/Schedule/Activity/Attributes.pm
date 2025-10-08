@@ -2,10 +2,9 @@ package Schedule::Activity::Attributes;
 
 use strict;
 use warnings;
-use Carp qw/confess/;
 use Schedule::Activity::Attribute;
 
-our $VERSION='0.1.0';
+our $VERSION='0.1.1';
 
 sub new {
 	my ($ref,%opt)=@_;
@@ -25,7 +24,7 @@ sub register {
 			push @errors,"Attribute conflicting types:  $attribute" } }
 	else {
 		eval { $$self{attr}{$attribute}=Schedule::Activity::Attribute->new(%opt); };
-		if($@) { return $@ }
+		if($@) { push @errors,$@ }
 	}
 	push @errors,$$self{attr}{$attribute}->validateConfig(%opt);
 	return @errors;

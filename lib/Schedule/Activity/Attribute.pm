@@ -2,9 +2,8 @@ package Schedule::Activity::Attribute;
 
 use strict;
 use warnings;
-use Carp qw/confess croak/;
 
-our $VERSION='0.1.0';
+our $VERSION='0.1.1';
 
 my %types=(
 	int=>{
@@ -27,7 +26,7 @@ sub new {
 		value=>$opt{value}//0,
 		log  =>{},
 	);
-	if(!defined($types{$self{type}})) { croak("Invalid type $self{type}") }
+	if(!defined($types{$self{type}})) { die "Attribute invalid type:  $self{type}" }
 	$self{log}{$opt{tm}//0}=$self{value};
 	return bless(\%self,$class);
 }
