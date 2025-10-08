@@ -3,7 +3,7 @@
 use strict;
 use warnings;
 use Schedule::Activity::Annotation;
-use Test::More tests=>2;
+use Test::More tests=>3;
 
 subtest 'validation'=>sub {
 	plan tests=>14;
@@ -118,3 +118,29 @@ subtest 'schedule annotation'=>sub {
 		'Before around zero');
 	#
 };
+
+subtest 'Attributes are reflected'=>sub {
+	plan tests=>1;
+	my ($annotation,@notes);
+	my @schedule=(
+		[  0,{keyname=>'activity1'}],
+		[100,{keyname=>'action1'}],
+		[200,{keyname=>'action2'}],
+		[300,{keyname=>'action3'}],
+		[400,{keyname=>'action4'}],
+		[500,{keyname=>'endact1'}],
+	);
+	#
+	$annotation=Schedule::Activity::Annotation->new(
+		message=>'annotation',
+		nodes=>qr/action2/,
+		before=>{min=>10,max=>45},
+		between=>180,
+		p=>1.00,
+		limit=>1,
+		attributes=>{grape=>{incr=>1}},
+	);
+	@notes=$annotation->annotate(@schedule);
+	is_deeply(\@notes,[[155,{message=>'annotation',attributes=>{grape=>{incr=>1}}}]],'Attribute included');
+};
+

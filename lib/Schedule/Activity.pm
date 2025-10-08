@@ -3,6 +3,7 @@ package Schedule::Activity;
 use strict;
 use warnings;
 use Ref::Util qw/is_arrayref is_hashref is_plain_hashref/;
+use Schedule::Activity::Annotation;
 use Schedule::Activity::Attributes;
 use Schedule::Activity::Message;
 use Schedule::Activity::Node;
@@ -173,7 +174,12 @@ sub buildSchedule {
 	my $attr=Schedule::Activity::Attributes->new();
 	if(!is_hashref($opt{configuration})) { $opt{configuration}={} }
 	if(!is_arrayref($opt{activities}))   { $opt{activities}=[] }
+	if(!is_hashref($opt{configuration}{annotations})) { $opt{configuration}{annotations}={} }
+	#
 	my @errors=validateConfig($attr,%{$opt{configuration}});
+	while(my ($k,$notes)=each %{$opt{configuration}{annotations}}) {
+		push @errors,map {"Annotation $k:  $_"} map {Schedule::Activity::Annotation::validate(%$_)} @$notes }
+
 	if(@errors) { return (error=>\@errors) }
 	my %config=buildConfig(%{$opt{configuration}});
 	#
@@ -186,6 +192,18 @@ sub buildSchedule {
 		$attr->log($tmoffset); # potentially overwritten by subsequent nodes
 	}
 	%{$res{attributes}}=$attr->report();
+	while(my ($group,$notes)=each %{$opt{configuration}{annotations}}) {
+		my @schedule;
+		foreach my $note (@$notes) {
+			my $annotation=Schedule::Activity::Annotation->new(%$note);
+			push @schedule,$annotation->annotate(@{$res{activities}});
+		}
+		@schedule=sort {$$a[0]<=>$$b[0]} @schedule;
+		for(my $i=0;$i<$#schedule;$i++) {
+			if($schedule[$i+1][0]==$schedule[$i][0]) {
+				splice(@schedule,$i+1,1); $i-- } }
+		$res{annotations}{$group}{events}=\@schedule;
+	}
 	return %res;
 }
 
@@ -272,6 +290,8 @@ Version 0.1.0
           tmmin=>5,tmavg=>5,tmmax=>5,
         },
       },
+      attributes =>{},
+      annotations=>{},
     },
     activities=>[
       [30,'Activity'],
@@ -293,23 +313,25 @@ A configuration for scheduling contains the following sections:
 
   %configuration=(
     node=>{...}
-    attributes=>... # see below
-    message  =>...  # not yet supported
-    insertion=>...  # not yet supported
+    attributes =>...  # see below
+    annotations=>...  # see below
+    messages   =>...  # not yet supported
   )
 
 Both activities and actions are configured as named C<node> entries.  With this structure, an action and activity might have the same C<message>, but must use different key names.
 
   'activity name'=>{
-    message=>... # an optional message string or object
-    next=>[...], # list of child node names
-    finish=>'activity conclusion',
+    message=>...    # an optional message string or object
+    next   =>[...], # list of child node names
+    finish =>'activity conclusion',
+    #
     (time specification)
     (attributes specification)
   }
   'action name'=>{
-    message=>... # an optional message string or object
-    next=>[...], # list of child node names
+    message=>...    # an optional message string or object
+    next   =>[...], # list of child node names
+    #
     (time specification)
     (attributes specification)
   }
@@ -363,6 +385,14 @@ The response from C<buildSchedule> is:
       [seconds, message],
       ..,
     ],
+    annotations=>{
+      'group'=>{
+        events=>[
+          [seconds, message],
+        ]
+      },
+      ...
+    },
     attributes=>{
       name=>{
         y  =>(final value),
@@ -370,7 +400,7 @@ The response from C<buildSchedule> is:
         avg=>(average, depends on type),
       },
       ...
-    }
+    },
   )
 
 =head2 Failures
@@ -453,6 +483,34 @@ The reported C<avg> is the percentage of time in the schedule for which the flag
 The reported C<xy> is an array of values of the form C<(tm, value)>, with each representing an activity/action referencing that attribute built into the schedule.  Each attribute will have its initial value of C<(0, value)>, either the default or the value specified in C<configuration{attributes}>.
 
 Undecided behavior:  As of version 0.1.1, attribute logging will also occur at the end of every activity, so changes in attributes across activity boundaries do not affect the average value calculation.  In particular, the starting value in any given activity is the most recent value in the previous activity, adjusted by any operator in the activity node itself.  For example, suppose two activities go from C<tm=0> to 10, and from C<tm=10> to 20.  If an attribute is set to C<tm=0, value=5> and not set again until C<tm=15, value=0>, then the average in the first activity is five.
+
+=head1 ANNOTATIONS
+
+A scheduling configuration may contain a list of annotations:
+
+  %configuration=(
+    annotations=>{
+      'annotation group'=>[
+        {annotation configuration},
+        ...
+      ]
+    },
+  )
+
+Scheduling I<annotations> are a collection of secondary events to be attached to the built schedule and are configured as described in L<Schedule::Activity::Annotation>.  Each named group can have one or more annotation.  Each annotation will be inserted around the matching actions in the schedule and be reported from C<buildSchedule> in the annotations section as:
+
+  annotations=>{
+    'group'=>{
+      events=>[
+        [seconds, message],
+        ...
+      ]
+    },
+  }
+
+Within an individual group, earlier annotations take priority if two events are scheduled at the same time.  Multiple groups of annotations may have conflicting event schedules with event overlap.  Note that the C<between> setting is only enforced for each annotation individually at this time.
+
+As of version 0.1.1, annotations do I<not> update the C<attributes> response from C<buildSchedule>.  Because annotations may themselves contain attributes, they are retained separately from the main schedule of activities to permit easier rebuilding.  At this time, however, the caller must verify that annotation schedules before merging them and their attributes into the schedule.  Annotations may also be built separately after schedule construction as described in L<Schedule::Activity::Annotation>.
 
 =head1 IMPORT MECHANISMS
 

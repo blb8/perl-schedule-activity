@@ -3,11 +3,10 @@
 use strict;
 use warnings;
 use Schedule::Activity;
-use Test::More tests=>9;
+use Test::More tests=>10;
 
 subtest 'validation'=>sub {
 	plan tests=>2;
-
 	is_deeply(
 		{Schedule::Activity::buildSchedule(
 			configuration=>{
@@ -20,7 +19,6 @@ subtest 'validation'=>sub {
 				},
 			},
 		)},{error=>['Node 1, Undefined name in array:  next']},'node:  invalid next entry');
-
 	is_deeply(
 		{Schedule::Activity::buildSchedule(
 			configuration=>{
@@ -33,7 +31,6 @@ subtest 'validation'=>sub {
 				},
 			},
 		)},{error=>['Node 1, Undefined name:  finish']},'node:  invalid finish entry');
-
 };
 
 subtest 'Simple scheduling'=>sub {
@@ -297,6 +294,51 @@ subtest 'Message attributes'=>sub {
 	is_deeply($schedule{attributes}{activity}{xy},[[0,1],[25,2],[30,2]],'Activities');
 	is_deeply($schedule{attributes}{action}{xy},  [[0,0],[5,1],[15,2],[30,2]],'Actions');
 	is_deeply($schedule{attributes}{messages}{xy},[[0,1],[5,2],[15,3],[25,4],[30,4]],'Messages');
+};
+
+subtest 'Annotations'=>sub {
+	plan tests=>1;
+	my %schedule;
+	my %configuration=(
+		node=>{
+			Activity=>{
+				message=>'Begin Activity',
+				next=>['action 1'],
+				tmmin=>5,tmavg=>5,tmmax=>5,
+				finish=>'Activity, conclude',
+			},
+			'action 1'=>{
+				message=>['Begin action 1'],
+				tmmin=>5,tmavg=>10,tmmax=>15,
+				next=>['action 2'],
+			},
+			'action 2'=>{
+				message=>'Begin action 2',
+				tmmin=>5,tmavg=>10,tmmax=>15,
+				next=>['Activity, conclude'],
+			},
+			'Activity, conclude'=>{
+				message=>'Conclude Activity',
+				tmmin=>5,tmavg=>5,tmmax=>5,
+			},
+		},
+		annotations=>{
+			'apple'=>[
+				{
+					message=>'annotation 1',
+					nodes=>qr/action 1/,
+					before=>{min=>-5,max=>-5},
+				},
+				{
+					message=>'annotation 2',
+					nodes=>qr/action 2/,
+					before=>{min=>5,max=>5},
+				},
+			],
+		},
+	);
+	%schedule=Schedule::Activity::buildSchedule(configuration=>\%configuration,activities=>[[30,'Activity']]);
+	is_deeply($schedule{annotations},{apple=>{events=>[[10,{message=>'annotation 1'}]]}},'Annotations created, overlap removed');
 };
 
 subtest 'Markdown loading'=>sub {
