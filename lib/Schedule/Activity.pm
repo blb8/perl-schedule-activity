@@ -44,6 +44,7 @@ sub validateConfig {
 			if(!is_hashref($$node{attributes})) { push @nerrors,"attributes, Invalid structure" }
 			else { while(my ($k,$v)=each %{$$node{attributes}}) { push @nerrors,$attr->register($k,%$v) } }
 		}
+		foreach my $kv (Schedule::Activity::Message::attributesFromConf($$node{message})) { push @nerrors,$attr->register($$kv[0],%{$$kv[1]}) }
 		if(@nerrors) { push @errors,map {"Node $k, $_"} @nerrors; next }
 		@invalids=grep {!defined($config{node}{$_})} @{$$node{next}//[]};
 		if(@invalids) { push @errors,"Node $k, Undefined name in array:  next" }
@@ -431,7 +432,7 @@ Multiple attributes can be referenced from any activity/action.  For example:
     },
   }
 
-Any attribute may include a C<note> for convenience, but this value is not stored or reported.  It is only for convenience.
+Any attribute may include a C<note> for convenience, but this value is not stored nor reported.  It is only for convenience.
 
 The main configuration can also declare attribute names and starting values.  It is recommended to set any non-zero initial values in this fashion, since calling C<set> requires that activity to always be the first requested in the schedule.  Boolean values must be declared in this section:
 
@@ -443,7 +444,7 @@ The main configuration can also declare attribute names and starting values.  It
     },
   )
 
-Attributes are verified before schedule construction, which will fail if an attribute name is referenced in a conflicting manner by different actions.
+Attributes within message alternate configurations are identified during configuration validation.  Together with activity/action configurations, attributes are verified before schedule construction, which will fail if an attribute name is referenced in a conflicting manner.
 
 =head2 Response values
 

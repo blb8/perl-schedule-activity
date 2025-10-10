@@ -255,7 +255,7 @@ subtest 'Message randomization'=>sub {
 };
 
 subtest 'Message attributes'=>sub {
-	plan tests=>3;
+	plan tests=>4;
 	my %schedule;
 	my %configuration=(
 		node=>{
@@ -273,7 +273,7 @@ subtest 'Message attributes'=>sub {
 				attributes=>{action=>{incr=>1}},
 			},
 			'action 2'=>{
-				message=>{alternates=>[{message=>'Activity',attributes=>{messages=>{incr=>1}}}]},
+				message=>{alternates=>[{message=>'Activity',attributes=>{messages=>{incr=>1},attr2=>{incr=>1}}}]},
 				tmmin=>5,tmavg=>10,tmmax=>15,
 				next=>['Activity, conclude'],
 				attributes=>{action=>{incr=>1}},
@@ -294,6 +294,7 @@ subtest 'Message attributes'=>sub {
 	is_deeply($schedule{attributes}{activity}{xy},[[0,1],[25,2],[30,2]],'Activities');
 	is_deeply($schedule{attributes}{action}{xy},  [[0,0],[5,1],[15,2],[30,2]],'Actions');
 	is_deeply($schedule{attributes}{messages}{xy},[[0,1],[5,2],[15,3],[25,4],[30,4]],'Messages');
+	is($schedule{attributes}{attr2}{y},1,'Message-only attributes');
 };
 
 subtest 'Annotations'=>sub {

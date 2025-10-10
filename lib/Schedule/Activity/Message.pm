@@ -22,15 +22,28 @@ sub new {
 }
 
 sub unwrap {
-	my ($msg)=@_;
-	if(!defined($msg)) { return ('',undef) }
-	if(!is_ref($msg))  { return ($msg,undef) }
+	my ($self,$msg)=@_;
+	if(!defined($msg)) { return ('',$self) }
+	if(!is_ref($msg))  { return ($msg,$self) }
 	if(is_hashref($msg)) { return ($$msg{message},$msg) }
 	return ('',$msg);
 }
 
-sub primary { my ($self)=@_; return unwrap($$self{msg}[0]) }
-sub random  { my ($self)=@_; return unwrap($$self{msg}[ int(rand(1+$#{$$self{msg}})) ]) }
+sub primary { my ($self)=@_; return $self->unwrap($$self{msg}[0]) }
+sub random  { my ($self)=@_; return $self->unwrap($$self{msg}[ int(rand(1+$#{$$self{msg}})) ]) }
+
+sub attributesFromConf {
+	my ($conf)=@_;
+	if(!is_hashref($conf)) { return }
+	my @res;
+	if(is_hashref($$conf{attributes})) {
+		while(my ($k,$v)=each %{$$conf{attributes}}) { push @res,[$k,$v] } }
+	if(is_arrayref($$conf{alternates})) {
+		foreach my $message (grep {is_hashref($_)} @{$$conf{alternates}}) {
+			if(is_hashref($$message{attributes})) {
+				while(my ($k,$v)=each %{$$message{attributes}}) { push @res,[$k,$v] } } } }
+	return @res;
+}
 
 1;
 
@@ -57,5 +70,15 @@ Schedule::Activity::Message - Container for individual or multiple messages
 		attributes=>{...} # optional
 		note      =>...   # optional
 	);
+
+=head1 FUNCTIONS
+
+=head2 random
+
+Retrieve a pair of C<(message,object)>, which is either an individual string message, or a random selection from an array or hash of alternatives.  The first index will always be a string, possibly empty.  The object can be used to inspect message attributes.
+
+=head2 attributesFromConf
+
+Given a plain (unknown) message configuration, find any embedded attributes.  This function is primarily useful during schedule configuration validation, prior to full action nodes being built, to identify all attributes within a nested configuration.  It does not need to handle named attributes because those are separately declared.
 
 =cut

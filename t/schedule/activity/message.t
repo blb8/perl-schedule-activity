@@ -3,7 +3,7 @@
 use strict;
 use warnings;
 use Schedule::Activity::Message;
-use Test::More tests=>3;
+use Test::More tests=>4;
 
 subtest 'init'=>sub {
 	plan tests=>3;
@@ -72,3 +72,33 @@ subtest 'Random selection'=>sub {
 	is_deeply(\%seen,{'mnop'=>1,'qrst'=>1},'Message:  hash n=2');
 };
 
+subtest 'Attributes'=>sub {
+	plan tests=>3;
+	my ($message,$string,$msg,%seen);
+	my $m='Schedule::Activity::Message';
+	#
+	$message=$m->new(message=>'hi',attributes=>{string=>{incr=>1}});
+	($string,$msg)=$message->random();
+	is_deeply([sort keys %{$$msg{attributes}//{}}],[qw/string/],'String message');
+	#
+	%seen=();
+	$message=$m->new(message=>[qw/one two/],attributes=>{array=>{incr=>1}});
+	foreach (1..10) {
+		($string,$msg)=$message->random();
+		foreach my $k (keys %{$$msg{attributes}//{}}) { $seen{$k}++ }
+	}
+	is_deeply(\%seen,{array=>10},'Array message');
+	#
+	%seen=();
+	$message=$m->new(message=>
+		{alternates=>[{message=>'one',attributes=>{one=>{}}},{message=>'two',attributes=>{two=>{}}}]},
+		attributes=>{hash=>{incr=>1}});
+	foreach (1..10) {
+		($string,$msg)=$message->random();
+		foreach my $k (keys %{$$msg{attributes}//{}}) { $seen{$k}++ }
+	}
+	is_deeply([sort keys %seen],[qw/one two/],'Hash message');
+};
+
+# attributesFromConf is effectively tested through activity.t at this point,
+# but specific tests could be added to ensure that it's prevalidation safe.

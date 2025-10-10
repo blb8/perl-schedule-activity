@@ -2,17 +2,13 @@
 
 =head1 Features
 
-=head2 Slack/buffer defaults
-
-As of version 0.1.1, missing time values are set with ratios 3,4,5; see L<Schedule::Activity>.  As an improvement, support passing these ratios during configuration building.  Eventually it will be helpful to pass slack/buffer defaults as part of schedule building:  Having a value used during schedule building would permit relaxation during retries, and could be reported with the result.  This requires changing assumptions in the validators.
-
 =head2 Attributes
 
-As of version 0.1.1, attributes are available in activity/action configurations and reported with C<buildSchedule>.  Future versions may support node filters, ie conditional logic predicated on the current attribute values during the build, such as C<next> node look-ahead filtering (with fallback).  Based on the nature of filtering, a nodal change at a given time may induce a rebuild of all following times (or the entire containing activity).
+As of version 0.1.1, attributes are available in activity/action configurations.  As of version 0.1.2, attributes are (correctly) available in message configurations.  Both are reported with C<buildSchedule>.  Future versions may support node filters, ie conditional logic predicated on the current attribute values during the build, such as C<next> node look-ahead filtering (with fallback).  Based on the nature of filtering, a nodal change at a given time may induce a rebuild of all following times (or the entire containing activity).
 
 =head2 Multimessage support
 
-As of version 0.1.1, messages can be strings, arrays, or a hash of alternates.  Messages are chosen randomly.  Message attributes are reported with the overall attribute results from C<buildSchedule>.  Attributes may be used in the future for filtering and searching.
+As of version 0.1.1, messages can be strings, arrays, or a hash of alternates.  Messages are chosen randomly.  Message attributes are reported with the overall attribute results from C<buildSchedule>.  Note that in version 0.1.1, only hash-alternate configurations support attributes (when predeclared, but this is fixed in 0.1.2).  Named messages, however, are expected to support attributes for string/array messages.  Attributes may be used in the future for filtering and searching.
 
 =head2 Flat configurations
 
@@ -65,6 +61,10 @@ First, something like a music playlist is similar to the base case here.  This i
 Second, something like holiday activities.  This is a "small number of choices" but "each is very fluid in length" and has C<limit=1>.  An import tool for this type of request should be rather easy, but Action limits are a prerequisite.
 
 Third, scheduling of paired events is not straightforward.  An example would be match-off lineups of N teams (eg fantasy leagues).  That is less a concern of temporal scheduling and more about uniformity in the lineup.  This is possible by running two simultaneous builders on the same configuration, with very fixed times, but may result in self-alignment of activities.  It's not clear that this type of scheduling will ever be supported in this library.
+
+=head2 Slack/buffer defaults
+
+As an improvement, support passing slack/buffer ratios during configuration building.  Eventually it will be helpful to pass slack/buffer defaults as part of schedule building:  Having a value used during schedule building would permit relaxation during retries, and could be reported with the result.  This requires changing assumptions in the validators.
 
 =head1 Functional improvements
 
