@@ -1,6 +1,6 @@
 Revision history for Schedule::Activity
 
-0.1.2 - 2025-10-..
+0.1.2 - 2025-10-11
 	- Fixed attribute discovery within message configurations
 	- Named messages
 

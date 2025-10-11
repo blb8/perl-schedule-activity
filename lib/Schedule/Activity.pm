@@ -8,7 +8,7 @@ use Schedule::Activity::Attributes;
 use Schedule::Activity::Message;
 use Schedule::Activity::Node;
 
-our $VERSION='0.1.1';
+our $VERSION='0.1.2';
 
 sub buildConfig {
 	my (%base)=@_;
@@ -282,7 +282,7 @@ Schedule::Activity - Generate random activity schedules
 
 =head1 VERSION
 
-Version 0.1.1
+Version 0.1.2
 
 =head1 SYNOPSIS
 
