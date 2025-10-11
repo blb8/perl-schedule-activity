@@ -18,12 +18,13 @@ sub buildConfig {
 		else { $res{node}{$k}=$node }
 		$res{node}{$k}{keyname}=$k;
 	}
+	my $msgNames=$base{messages}//{};
 	while(my ($k,$node)=each %{$res{node}}) {
 		my @nexts=map {$res{node}{$_}} @{$$node{next}//[]};
 		if(@nexts) { $$node{next}=\@nexts }
 		else       { delete($$node{next}) }
 		if(defined($$node{finish})) { $$node{finish}=$res{node}{$$node{finish}} }
-		$$node{msg}=Schedule::Activity::Message->new(message=>$$node{message});
+		$$node{msg}=Schedule::Activity::Message->new(message=>$$node{message},names=>$msgNames);
 	}
 	return %res;
 }
@@ -36,6 +37,19 @@ sub validateConfig {
 		if(!is_hashref($config{attributes})) { push @errors,'Attributes invalid structure' }
 		else { while(my ($k,$v)=each %{$config{attributes}}) { push @errors,$attr->register($k,%$v) } }
 	}
+	if($config{messages}) {
+		if(!is_hashref($config{messages})) { push @errors,'Messages invalid structure' }
+		else {
+		while(my ($namea,$msga)=each %{$config{messages}}) {
+			if(!is_hashref($msga)) { push @errors,"Messages $namea invalid structure" }
+			elsif(defined($$msga{attributes})&&!is_hashref($$msga{attributes})) { push @errors,"Messages $namea invalid attributes" }
+			else { foreach my $kv (Schedule::Activity::Message::attributesFromConf($msga)) { push @errors,$attr->register($$kv[0],%{$$kv[1]}) } }
+			if(is_hashref($$msga{message})) {
+				if(defined($$msga{message}{alternates})&&!is_arrayref($$msga{message}{alternates})) { push @errors,"Messages $namea invalid alternates" }
+				else { foreach my $kv (Schedule::Activity::Message::attributesFromConf($$msga{message})) { push @errors,$attr->register($$kv[0],%{$$kv[1]}) } }
+			}
+		}
+	} } # messages
 	while(my ($k,$node)=each %{$config{node}}) {
 		if(!is_hashref($node)) { push @errors,"Node $k, Invalid structure"; next }
 		Schedule::Activity::Node::defaulting($node);
@@ -149,12 +163,13 @@ sub scheduler {
 	# This works for global attribute reporting, but note that findpath will
 	# need updated to support node filtering by attribute.  In particular,
 	# messages will need to be materialized when chosen, since they may
-	# after later node selection.
-	foreach my $node (@res) {
-		my $msg;
-		($$node[1]{message},$msg)=$$node[1]{msg}->random();
+	# alter later node selection.
+	foreach my $i (0..$#res) {
+		my $node=$res[$i][1];
+		my ($message,$msg)=$$node{msg}->random();
+		$res[$i][1]=Schedule::Activity::Node->new(%$node,message=>$message);
 		if(is_hashref($msg)) { while(my ($k,$v)=each %{$$msg{attributes}}) {
-			$opt{attr}->change($k,%$v,tm=>$$node[0]+$opt{tmoffset});
+			$opt{attr}->change($k,%$v,tm=>$res[$i][0]+$opt{tmoffset});
 		} }
 	}
 	#
@@ -197,7 +212,12 @@ sub buildSchedule {
 		my @schedule;
 		foreach my $note (@$notes) {
 			my $annotation=Schedule::Activity::Annotation->new(%$note);
-			push @schedule,$annotation->annotate(@{$res{activities}});
+			foreach my $note ($annotation->annotate(@{$res{activities}})) {
+				my ($message,$mobj)=Schedule::Activity::Message->new(message=>$$note[1]{message},names=>$opt{configuration}{messages}//{})->random();
+				my %node=(message=>$message);
+				if($$note[1]{annotations}) { $node{annotations}=$$note[1]{annotations} }
+				push @schedule,[$$note[0],\%node,@$note[2..$#$note]];
+			}
 		}
 		@schedule=sort {$$a[0]<=>$$b[0]} @schedule;
 		for(my $i=0;$i<$#schedule;$i++) {
@@ -316,7 +336,7 @@ A configuration for scheduling contains the following sections:
     node=>{...}
     attributes =>...  # see below
     annotations=>...  # see below
-    messages   =>...  # not yet supported
+    messages   =>...  # see below
   )
 
 Both activities and actions are configured as named C<node> entries.  With this structure, an action and activity might have the same C<message>, but must use different key names.
@@ -373,8 +393,6 @@ Each activity/action node may contain an optional message.  Messages are provide
   }
 
 Message selection is randomized for arrays and a hash of alternates.  Any attributes are emitted with the attribute response values, described below.
-
-One proposal links the string in the C<message> to the collection of top-level C<configuration{message}> keys, to support better message reuse across activities.  While this structure has not been fully defined, carefully choose message strings that are unlikely to clash with potential future keynames.
 
 =head1 RESPONSE
 
@@ -512,6 +530,37 @@ Scheduling I<annotations> are a collection of secondary events to be attached to
 Within an individual group, earlier annotations take priority if two events are scheduled at the same time.  Multiple groups of annotations may have conflicting event schedules with event overlap.  Note that the C<between> setting is only enforced for each annotation individually at this time.
 
 As of version 0.1.1, annotations do I<not> update the C<attributes> response from C<buildSchedule>.  Because annotations may themselves contain attributes, they are retained separately from the main schedule of activities to permit easier rebuilding.  At this time, however, the caller must verify that annotation schedules before merging them and their attributes into the schedule.  Annotations may also be built separately after schedule construction as described in L<Schedule::Activity::Annotation>.
+
+=head1 NAMED MESSAGES
+
+A scheduling configuration may contain a list of common messages.  This is particularly useful when there are a large number of common alternate messages where copy/pasting through the scheduling configuration would be egregious.
+
+  %configuration=(
+    messages=>{
+      'key name'=>{ any regular message configuration }
+			...
+    },
+  )
+
+Any message configuration within activity/action nodes may then reference the message by its key:
+
+  message=>'key name'
+  message=>'message string',
+  message=>['An array','of alternates including','key name','chosen randomly']
+  message=>{name=>'key name},
+  message=>{
+    alternates=>[
+      {message=>'A hash containing an array', attributes=>{...}}
+      {message=>'key name'}
+      {name=>'key name'}
+    ]
+  }
+
+During message selection, any string message or configured C<name> will return the message configuration for C<key=name>, if it exists, or will return the string message.  If a configured message matches a referenced name, the name takes precedence.
+
+The configuration of a named message may only create string, array, or hash alternative messages; it cannot reference another name.
+
+This feature is experimental starting with version 0.1.2.
 
 =head1 IMPORT MECHANISMS
 

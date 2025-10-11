@@ -8,7 +8,7 @@ As of version 0.1.1, attributes are available in activity/action configurations.
 
 =head2 Multimessage support
 
-As of version 0.1.1, messages can be strings, arrays, or a hash of alternates.  Messages are chosen randomly.  Message attributes are reported with the overall attribute results from C<buildSchedule>.  Note that in version 0.1.1, only hash-alternate configurations support attributes (when predeclared, but this is fixed in 0.1.2).  Named messages, however, are expected to support attributes for string/array messages.  Attributes may be used in the future for filtering and searching.
+As of version 0.1.2, messages can be strings, arrays, a hash of alternates, a named message key, or a hash named message.  Messages are chosen randomly.  Message attributes are reported with the overall attribute results from C<buildSchedule>.  Attributes are supported for hash-alternate configurations and within named messages.  Attributes may be used in the future for filtering and searching.
 
 =head2 Flat configurations
 
@@ -19,6 +19,10 @@ As of version 0.1.1, basic Markdown can be imported via C<Activity::loadMarkdown
 As of version 0.1.1, annotations are secondary/tertiary schedules that are predicated on the primary list of activity/actions.  After the actions have been scheduled, additional messages are inserted into the schedule either "before" or "after" existing events.  For example, in an exercise schedule, a message to change the background music is an annotation and not part of the primary schedule.
 
 Configuration is defined in L<Schedule::Activity::Annotation>.  The C<insert> functionality is still only "proposed" and may be unnecessary.  Additional functionality might be added to prevent clashes across multiple annotation groups.
+
+=head2 Named messages
+
+As of version 0.1.2, the scheduling configuration may contain a collection of keyed message names.  Each can be referenced throughout the activity/action nodes to reduce the copy/pasting needed to build the schedule.
 
 =head2 Annotation Attributes
 
@@ -67,6 +71,10 @@ Third, scheduling of paired events is not straightforward.  An example would be 
 As an improvement, support passing slack/buffer ratios during configuration building.  Eventually it will be helpful to pass slack/buffer defaults as part of schedule building:  Having a value used during schedule building would permit relaxation during retries, and could be reported with the result.  This requires changing assumptions in the validators.
 
 =head1 Functional improvements
+
+=head2 Validation and configuration build
+
+Attribute registration is getting messy; needs more helpers, particularly for pulling attributes out of message objects.  Validation of named messages, and even messages themselves, is flakey.
 
 =head2 Object interface
 

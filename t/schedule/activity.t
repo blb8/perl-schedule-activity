@@ -3,7 +3,7 @@
 use strict;
 use warnings;
 use Schedule::Activity;
-use Test::More tests=>10;
+use Test::More tests=>11;
 
 subtest 'validation'=>sub {
 	plan tests=>2;
@@ -340,6 +340,56 @@ subtest 'Annotations'=>sub {
 	);
 	%schedule=Schedule::Activity::buildSchedule(configuration=>\%configuration,activities=>[[30,'Activity']]);
 	is_deeply($schedule{annotations},{apple=>{events=>[[10,{message=>'annotation 1'}]]}},'Annotations created, overlap removed');
+};
+
+subtest 'Named messages'=>sub {
+	plan tests=>2;
+	my %schedule;
+	my %configuration=(
+		node=>{
+			Activity=>{
+				message=>'Begin Activity',
+				next=>['action 1'],
+				tmmin=>5,tmavg=>5,tmmax=>5,
+				finish=>'Activity, conclude',
+			},
+			'action 1'=>{
+				message=>[qw/named1 named2/],
+				tmmin=>5,tmavg=>10,tmmax=>15,
+				next=>['action 2','Activity, conclude'],
+			},
+			'action 2'=>{
+				message=>[qw/named1 named2/],
+				tmmin=>5,tmavg=>10,tmmax=>15,
+				next=>['action 1','Activity, conclude'],
+			},
+			'Activity, conclude'=>{
+				message=>'Conclude Activity',
+				tmmin=>5,tmavg=>5,tmmax=>5,
+			},
+		},
+		messages=>{
+			named1=>{
+				message=>['Named one one','Named one two'],
+				attributes=>{attr1=>{incr=>1}},
+			},
+			named2=>{
+				message=>{alternates=>[
+					{message=>'Named two one',attributes=>{attr21=>{incr=>1}}},
+					{message=>'Named two two',attributes=>{attr22=>{incr=>1}}},
+				]},
+			},
+		},
+	);
+	%schedule=Schedule::Activity::buildSchedule(configuration=>\%configuration,activities=>[[300,'Activity']]);
+	my %result;
+	foreach my $message (map {$$_[1]{message}} @{$schedule{activities}}) { $result{string}{$message}=1 }
+	foreach my $attr (qw/attr1 attr21 attr22/) { $result{attr}{$attr}=($schedule{attributes}{$attr}{y}>0?1:0) }
+	is_deeply(
+		[sort keys %{$result{string}}],
+		['Begin Activity','Conclude Activity','Named one one','Named one two','Named two one','Named two two'],
+		'All messages');
+	is_deeply($result{attr},{attr1=>1,attr21=>1,attr22=>1},'All attributes');
 };
 
 subtest 'Markdown loading'=>sub {

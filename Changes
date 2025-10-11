@@ -1,7 +1,8 @@
 Revision history for Schedule::Activity
 
-0.1.2 - 2025-..-..
-	- Fixed attribute discover within message configurations
+0.1.2 - 2025-10-..
+	- Fixed attribute discovery within message configurations
+	- Named messages
 
 0.1.1 - 2025-10-08
 	- Annotations are built and reported separately from buildSchedule
