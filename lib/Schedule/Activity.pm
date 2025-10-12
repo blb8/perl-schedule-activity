@@ -159,29 +159,27 @@ sub scheduler {
 		$res[$i][3]=($res[$i][1]{tmmax}//0)-$dt;
 	}
 	#
-	# Materialize the messages and their attributes.
-	# This works for global attribute reporting, but note that findpath will
-	# need updated to support node filtering by attribute.  In particular,
-	# messages will need to be materialized when chosen, since they may
-	# alter later node selection.
+	# Full materialization of messages and attributes occurs after all
+	# slack/buffer adjustments have been made.  Node attributes are
+	# the 'defaults', which message attributes applying later.  This
+	# means that all attributes will be applied, but 'set' operations in
+	# messages will 'win'.
+	#
+	# In the future, message selection may occur during path construction,
+	# to achieve goals of node filtering, but random message selection
+	# here will only see the single message in that result.
+	#
 	foreach my $i (0..$#res) {
 		my $node=$res[$i][1];
+		if($$node{attributes}) {
+			while(my ($k,$v)=each %{$$node{attributes}}) {
+				$opt{attr}->change($k,%$v,tm=>$res[$i][0]+$opt{tmoffset}) } }
 		my ($message,$msg)=$$node{msg}->random();
 		$res[$i][1]=Schedule::Activity::Node->new(%$node,message=>$message);
 		if(is_hashref($msg)) { while(my ($k,$v)=each %{$$msg{attributes}}) {
 			$opt{attr}->change($k,%$v,tm=>$res[$i][0]+$opt{tmoffset});
 		} }
 	}
-	#
-	# This works for global attribute reporting, but note that findpath will
-	# need updated to support node filtering by attribute.  In particular,
-	# a fully built result in this step may need to be completely abandoned
-	# if a node filter encounters a violation.  Filtering will only be possible
-	# if attributes are used to filter node->nextrandom
-	#
-	foreach my $item (grep {$$_[1]{attributes}} @res) {
-		while(my ($k,$v)=each %{$$item[1]{attributes}}) {
-			$opt{attr}->change($k,%$v,tm=>$$item[0]+$opt{tmoffset}) } }
 	return @res;
 }
 
@@ -502,6 +500,16 @@ The C<bool> type must be declared in C<%configuration>.  The value may be specif
 Boolean attributes within activity/actions support:  C<set>.  Currently there is no restriction on values, but the behavior is only defined for values 0/1.
 
 The reported C<avg> is the percentage of time in the schedule for which the flag was true.  That is, if C<tm=0, value=0>, and C<tm=7, value=1>, and C<tm=10, value=1> is the complete schedule, then the reported average for the boolean will be C<0.3>.
+
+=head2 Precedence
+
+When an activity/action node and a selected message both contain attributes, the value of the attribute is updated first from the action node and then from the message node.  For boolean attributes, this means the "value set in the message has precedence".  For integer attributes, suppose that the value is initially zero; then, if both the action and message have attribute operators, the result will be:
+
+  Action  Message  Value
+  set=1   set=2      2
+  incr=3  set=4      4
+  set=5   incr=6    11
+  incr=7  incr=8    15
 
 =head2 Logging
 

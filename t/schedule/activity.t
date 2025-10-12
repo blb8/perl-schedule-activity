@@ -3,7 +3,7 @@
 use strict;
 use warnings;
 use Schedule::Activity;
-use Test::More tests=>11;
+use Test::More tests=>12;
 
 subtest 'validation'=>sub {
 	plan tests=>2;
@@ -295,6 +295,65 @@ subtest 'Message attributes'=>sub {
 	is_deeply($schedule{attributes}{action}{xy},  [[0,0],[5,1],[15,2],[30,2]],'Actions');
 	is_deeply($schedule{attributes}{messages}{xy},[[0,1],[5,2],[15,3],[25,4],[30,4]],'Messages');
 	is($schedule{attributes}{attr2}{y},1,'Message-only attributes');
+};
+
+subtest 'Node+Message attributes'=>sub {
+	plan tests=>6;
+	my %schedule=Schedule::Activity::buildSchedule(activities=>[[20,'root']],configuration=>{node=>{
+		root=>{
+			next=>['step1'],
+			message=>{alternates=>[{message=>'One',attributes=>{boolA=>{set=>0},intA=>{set=>8}}}]},
+			tmavg=>5,
+			finish=>'finish',
+			attributes=>{
+				boolA=>{set=>1},
+				intA =>{set=>9},
+			},
+		},
+		step1=>{
+			next=>['step2'],
+			message=>{alternates=>[{message=>'Two',attributes=>{boolA=>{set=>1},intA=>{incr=>1}}}]},
+			tmavg=>5,
+			attributes=>{
+				boolA=>{set=>0},
+				intA =>{set=>9},
+			},
+		},
+		step2=>{
+			next=>['finish'],
+			message=>{alternates=>[{message=>'Three',attributes=>{boolA=>{set=>1},intA=>{set=>7}}}]},
+			tmavg=>5,
+			attributes=>{
+				boolA=>{set=>0},
+				intA =>{incr=>9},
+			},
+		},
+		'finish'=>{
+			message=>{alternates=>[{message=>'Four',attributes=>{boolA=>{set=>0},intA=>{incr=>3}}}]},
+			tmavg=>5,
+			attributes=>{
+				boolA=>{set=>1},
+				intA =>{incr=>2},
+			},
+		}},
+		attributes=>{
+			boolA=>{type=>'bool'},
+			intA =>{type=>'int',value=>0},
+		},
+	});
+	is_deeply($schedule{attributes}{boolA}{xy},
+		[
+			[ 0,0],
+			[ 5,1],
+			[10,1],
+			[15,0],
+			[20,0],
+		],'Boolean:  set/set operations');
+	is_deeply($schedule{attributes}{intA}{xy}[0],[ 0,8], 'Integer:  set/set');
+	is_deeply($schedule{attributes}{intA}{xy}[1],[ 5,10],'Integer:  set/incr');
+	is_deeply($schedule{attributes}{intA}{xy}[2],[10,7], 'Integer:  incr/set');
+	is_deeply($schedule{attributes}{intA}{xy}[3],[15,12],'Integer:  incr/incr');
+	is_deeply($schedule{attributes}{intA}{xy}[4],[20,12],'Integer:  end of activity');
 };
 
 subtest 'Annotations'=>sub {
