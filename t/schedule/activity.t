@@ -321,7 +321,7 @@ subtest 'Node+Message attributes'=>sub {
 		},
 		step2=>{
 			next=>['finish'],
-			message=>{alternates=>[{message=>'Three',attributes=>{boolA=>{set=>1},intA=>{set=>7}}}]},
+			message=>{name=>'named1'},
 			tmavg=>5,
 			attributes=>{
 				boolA=>{set=>0},
@@ -339,6 +339,9 @@ subtest 'Node+Message attributes'=>sub {
 		attributes=>{
 			boolA=>{type=>'bool'},
 			intA =>{type=>'int',value=>0},
+		},
+		messages=>{
+			named1=>{message=>'Three',attributes=>{boolA=>{set=>1},intA=>{set=>7}}},
 		},
 	});
 	is_deeply($schedule{attributes}{boolA}{xy},
