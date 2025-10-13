@@ -3,7 +3,7 @@
 use strict;
 use warnings;
 use Schedule::Activity::Attribute;
-use Test::More tests=>5;
+use Test::More tests=>6;
 
 subtest 'init'=>sub {
 	plan tests=>9;
@@ -50,6 +50,20 @@ subtest 'Change:  Boolean'=>sub {
 	my $attr=Schedule::Activity::Attribute->new(type=>'bool',value=>0);
 	$attr->change(set=>1); ok( $attr->value(),'set 1');
 	$attr->change(set=>0); ok(!$attr->value(),'set 0');
+};
+
+subtest 'Change:  Log behavior'=>sub {
+	plan tests=>3;
+	my $attr=Schedule::Activity::Attribute->new(type=>'int',value=>0,tm=>0);
+	$attr->change(set=>10,tm=>3);
+	$attr->change(set=>20,tm=>6);
+	is($attr->value(),20,'Value from maximum time');
+	#
+	$attr=Schedule::Activity::Attribute->new(type=>'int',value=>0,tm=>0);
+	$attr->change(set=>30,tm=>6);
+	$attr->change(set=>15,tm=>3);
+	is($attr->value(),30,'Historic event does not affect value');
+	is_deeply($$attr{log},{0=>0,6=>30},'Historic event is not logged');
 };
 
 # t  x
