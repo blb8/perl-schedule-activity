@@ -73,7 +73,7 @@ sub validateConfig {
 # While that is easy to implement for changes to the value, the log() steps are a bit more complicated.
 # It likely needs to push a full copy of the log; probably no other way as such.
 #
-my $ATTRDEV=0;
+my $ATTRDEV=1;
 sub nodeattrdev {
 	my ($optattr,$tm,$node)=@_;
 	if(!$ATTRDEV) { return }
@@ -118,14 +118,14 @@ sub findpath {
 				$conclusion->increment(\$tm,\$slack,\$buffer);
 				$node=undef;
 			}
-			elsif($tm-$opt{goal}<$slack) { $node=$node->nextrandom() }
+			elsif($tm-$opt{goal}<$slack) { $node=$node->nextrandom(attr=>$opt{attr}{attr}) }
 			elsif($opt{backtracks}>0) { 
 				if($ATTRDEV) { $opt{attr}->pop() }
 				return (retry=>1,error=>"No backtracking support");
 			}
 			else { die 'this needs to backtrack or retry' }
 		}
-		else { $node=$node->nextrandom(not=>$conclusion) }
+		else { $node=$node->nextrandom(not=>$conclusion,attr=>$opt{attr}{attr}) }
 	}
 	if($node&&($node eq $conclusion)) {
 		push @res,[$tm,$conclusion];

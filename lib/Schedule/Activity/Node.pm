@@ -7,7 +7,7 @@ use Scalar::Util qw/looks_like_number/;
 
 our $VERSION='0.1.3';
 
-my %property=map {$_=>undef} qw/tmmin tmavg tmmax next finish message attribute note attributes/;
+my %property=map {$_=>undef} qw/tmmin tmavg tmmax next finish message attribute note attributes require/;
 
 my %defaults=(
 	'tmmax/tmavg'=>5/4,
@@ -98,9 +98,25 @@ sub nextrandom {
 	my $N=1+$#{$$self{next}};
 	if($N<=0) { return }
 	if($N==1) { return $$self{next}[0] }
-	my $node=$$self{next}[ int(rand($N)) ];
-	if($opt{not}) { while($node eq $opt{not}) { $node=$$self{next}[ int(rand($N)) ] } }
-	return $node;
+	my @candidates;
+	foreach my $next (@{$$self{next}}) {
+		if($opt{not}&&($opt{not} eq $next)) { next }
+		if(!ref($next)) { push @candidates,$next; next }
+		if($$next{require}&&$opt{attr}) {
+			if($$next{require}{attr}) {
+				my ($attr,$op,$value)=@{$$next{require}}{qw/attr op value/};
+				if($op eq 'lt') {
+					if($opt{attr}{$attr}{value} ge $value) { next }
+				}
+			}
+		}
+		push @candidates,$next;
+	}
+	if(!@candidates) { return }
+	return $candidates[ int(rand(1+$#candidates)) ];
+#	my $node=$$self{next}[ int(rand($N)) ];
+#	if($opt{not}) { while($node eq $opt{not}) { $node=$$self{next}[ int(rand($N)) ] } }
+#	return $node;
 }
 
 sub hasnext {
