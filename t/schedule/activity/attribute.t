@@ -3,7 +3,7 @@
 use strict;
 use warnings;
 use Schedule::Activity::Attribute;
-use Test::More tests=>6;
+use Test::More tests=>7;
 
 subtest 'init'=>sub {
 	plan tests=>9;
@@ -80,5 +80,33 @@ subtest 'Log/avg:  Integer'=>sub {
 	my $expect=(1*6+2*17+4*11)/7;
 	is_deeply($$attr{log},{0=>0,1=>12,3=>22,7=>0},'Log');
 	is($attr->average(),12,'Weighted average');
+};
+
+subtest 'Dump/Restore'=>sub {
+	plan tests=>11;
+	my $attr=Schedule::Activity::Attribute->new(type=>'int',value=>0,tm=>0);
+	$attr->change(tm=>5,set=>15);
+	$attr->change(tm=>10,set=>5);
+	$attr->change(tm=>15,set=>10);
+	my %copy=$attr->dump();
+	is($copy{value},10,'Dumped:  value');
+	is($copy{tmmax},15,'Dumped:  tmmax');
+	$attr->change(tm=>20,incr=>10);
+	$attr->change(tm=>25,incr=>10);
+	is($attr->value(),30,'Attr:  value');
+	is($$attr{tmmax}, 25,'Attr:  tmmax');
+	$attr->restore(%copy);
+	is($attr->value(),10,'Restored:  value');
+	is($$attr{tmmax}, 15,'Restored:  tmmax');
+	#
+	$attr->change(tm=>20,incr=>10);
+	$attr->change(tm=>25,incr=>10);
+	is($attr->value(),30,'Attr:  value');
+	is($$attr{tmmax}, 25,'Attr:  tmmax');
+	my $refid="$attr";
+	$attr=Schedule::Activity::Attribute->restore(%copy);
+	is($attr->value(),10,'Restored (static):  value');
+	is($$attr{tmmax}, 15,'Restored (static):  tmmax');
+	isnt("$attr",$refid,'New object created');
 };
 

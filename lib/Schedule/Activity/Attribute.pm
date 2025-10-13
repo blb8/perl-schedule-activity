@@ -75,6 +75,30 @@ sub average {
 	return &{$types{$$self{type}}{average}}($$self{log});
 }
 
+sub dump {
+	my ($self)=@_;
+	my %res=(
+		log=>{ %{$$self{log}} },
+		(map {$_=>$$self{$_}} qw/type value tmmax/),
+	);
+	return %res;
+}
+
+sub restore {
+	my ($ref,%opt)=@_;
+	if(ref($ref)) {
+		foreach my $k (keys %opt) { $$ref{$k}=$opt{$k} }
+		return $ref;
+	}
+	my %self=(
+		type =>$opt{type}//'int',
+		value=>$opt{value}//0,
+		log  =>$opt{log}//{},
+		tmmax=>$opt{tmmax}//0,
+	);
+	return bless(\%self,$ref);
+}
+
 sub _xy {
 	my ($self)=@_;
 	return map {[$_,$$self{log}{$_}]} sort {$a<=>$b} keys %{$$self{log}};
@@ -191,5 +215,13 @@ Returns errors if any of the keys in an attribute configuration are unavailable 
 Called with a timestamp as C<$attr->log(tm)> to create a log entry of the current value.  This is public so callers can establish a "checkpoint" where the value is known/unchanged, typically at boundaries of events or scheduling windows.
 
 Does nothing if the indicated time is below the maximum logged time.
+
+=head2 dump
+
+Return a hash of values that can be used to restore the state of the attribute.
+
+=head2 restore
+
+Called either as a static function or C<$attr->restore(%copy)>, loads the state of the attribute from the given hash.
 
 =cut
