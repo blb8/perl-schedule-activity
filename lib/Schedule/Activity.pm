@@ -75,22 +75,9 @@ sub validateConfig {
 #
 my $ATTRDEV=0;
 sub nodeattrdev {
-	my ($optattr,$tm,$node,$attributes)=@_;
+	my ($optattr,$tm,$node)=@_;
 	if(!$ATTRDEV) { return }
-	if($$node{attributes}) {
-		while(my ($k,$v)=each %{$$node{attributes}}) {
-			if(defined($$v{set})) { $$attributes{$k}=$$v{set} }
-			if($$v{incr})         { $$attributes{$k}+=$$v{incr} }
-			if($$v{decr})         { $$attributes{$k}-=$$v{decr} }
-		} 
-	}
 	my ($message,$msg)=$$node{msg}->random();
-	if(is_hashref($msg)) { while(my ($k,$v)=each %{$$msg{attributes}}) {
-		if(defined($$v{set})) { $$attributes{$k}=$$v{set} }
-		if($$v{incr})         { $$attributes{$k}+=$$v{incr} }
-		if($$v{decr})         { $$attributes{$k}-=$$v{decr} }
-	} }
-	#
 	if($$node{attributes}) {
 		while(my ($k,$v)=each %{$$node{attributes}}) {
 			$optattr->change($k,%$v,tm=>$tm) } }
@@ -106,13 +93,11 @@ sub findpath {
 	my ($tm,$slack,$buffer,@res)=(0,0,0);
 	my $tension=1-($opt{tension}//0.5);
 	my ($node,$conclusion)=($opt{start},$opt{finish});
-	my %attributes;
 	if($ATTRDEV) { $opt{attr}->push() }
-	if($ATTRDEV) { if($opt{attr}) { while(my ($k,$v)=each %{$opt{attr}{attr}}) { $attributes{$k}=$$v{value} } } }
 	while($node&&($node ne $conclusion)) {
 		push @res,[$tm,$node];
-		if($ATTRDEV) { push @{$res[-1]},nodeattrdev($opt{attr},$tm+$opt{tmoffset},$node,\%attributes) }
-		if(0&&$ATTRDEV) { print STDERR "ATTR:  ",join(',',map {"$_=".$attributes{$_}} sort(keys %attributes)),"\n" }
+		if($ATTRDEV) { push @{$res[-1]},nodeattrdev($opt{attr},$tm+$opt{tmoffset},$node) }
+		if(1&&$ATTRDEV) { print STDERR "ATTR:  ",join(',',map {"$_=".$opt{attr}{attr}{$_}{value}} sort(keys %{$opt{attr}{attr}})),"\n" }
 		$node->increment(\$tm,\$slack,\$buffer);
 		if(
 			($tm+$tension*$buffer>=$opt{goal})
@@ -120,16 +105,16 @@ sub findpath {
 			&&($node->hasnext($conclusion))
 		) {
 			push @res,[$tm,$conclusion];
-			if($ATTRDEV) { push @{$res[-1]},nodeattrdev($opt{attr},$tm+$opt{tmoffset},$conclusion,\%attributes) }
-			if(0&&$ATTRDEV) { print STDERR "ATTR:  ",join(',',map {"$_=".$attributes{$_}} sort(keys %attributes)),"\n" }
+			if($ATTRDEV) { push @{$res[-1]},nodeattrdev($opt{attr},$tm+$opt{tmoffset},$conclusion) }
+			if(1&&$ATTRDEV) { print STDERR "ATTR:  ",join(',',map {"$_=".$opt{attr}{attr}{$_}{value}} sort(keys %{$opt{attr}{attr}})),"\n" }
 			$conclusion->increment(\$tm,\$slack,\$buffer);
 			$node=undef;
 		}
 		elsif($tm>=$opt{goal}) {
 			if($node->hasnext($conclusion)) {
 				push @res,[$tm,$conclusion];
-				if($ATTRDEV) { push @{$res[-1]},nodeattrdev($opt{attr},$tm+$opt{tmoffset},$conclusion,\%attributes) }
-				if(0&&$ATTRDEV) { print STDERR "ATTR:  ",join(',',map {"$_=".$attributes{$_}} sort(keys %attributes)),"\n" }
+				if($ATTRDEV) { push @{$res[-1]},nodeattrdev($opt{attr},$tm+$opt{tmoffset},$conclusion) }
+				if(1&&$ATTRDEV) { print STDERR "ATTR:  ",join(',',map {"$_=".$opt{attr}{attr}{$_}{value}} sort(keys %{$opt{attr}{attr}})),"\n" }
 				$conclusion->increment(\$tm,\$slack,\$buffer);
 				$node=undef;
 			}
@@ -144,8 +129,8 @@ sub findpath {
 	}
 	if($node&&($node eq $conclusion)) {
 		push @res,[$tm,$conclusion];
-		if($ATTRDEV) { push @{$res[-1]},nodeattrdev($opt{attr},$tm+$opt{tmoffset},$conclusion,\%attributes) }
-		if(0&&$ATTRDEV) { print STDERR "ATTR:  ",join(',',map {"$_=".$attributes{$_}} sort(keys %attributes)),"\n" }
+		if($ATTRDEV) { push @{$res[-1]},nodeattrdev($opt{attr},$tm+$opt{tmoffset},$conclusion) }
+		if(1&&$ATTRDEV) { print STDERR "ATTR:  ",join(',',map {"$_=".$opt{attr}{attr}{$_}{value}} sort(keys %{$opt{attr}{attr}})),"\n" }
 		$conclusion->increment(\$tm,\$slack,\$buffer);
 		$node=undef;
 	}
