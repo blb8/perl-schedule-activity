@@ -67,13 +67,52 @@ sub validateConfig {
 	return @errors;
 }
 
+# proof of concept
+# will need additional helpers in the classes to do this
+# One possibility is Attributes->push and pop, permitting findpath() to use the primary opt{attr} object.
+# While that is easy to implement for changes to the value, the log() steps are a bit more complicated.
+# It likely needs to push a full copy of the log; probably no other way as such.
+#
+my $ATTRDEV=0;
+sub nodeattrdev {
+	my ($optattr,$tm,$node,$attributes)=@_;
+	if(!$ATTRDEV) { return }
+	if($$node{attributes}) {
+		while(my ($k,$v)=each %{$$node{attributes}}) {
+			if(defined($$v{set})) { $$attributes{$k}=$$v{set} }
+			if($$v{incr})         { $$attributes{$k}+=$$v{incr} }
+			if($$v{decr})         { $$attributes{$k}-=$$v{decr} }
+		} 
+	}
+	my ($message,$msg)=$$node{msg}->random();
+	if(is_hashref($msg)) { while(my ($k,$v)=each %{$$msg{attributes}}) {
+		if(defined($$v{set})) { $$attributes{$k}=$$v{set} }
+		if($$v{incr})         { $$attributes{$k}+=$$v{incr} }
+		if($$v{decr})         { $$attributes{$k}-=$$v{decr} }
+	} }
+	#
+	if($$node{attributes}) {
+		while(my ($k,$v)=each %{$$node{attributes}}) {
+			$optattr->change($k,%$v,tm=>$tm) } }
+	if(is_hashref($msg)) { while(my ($k,$v)=each %{$$msg{attributes}}) {
+		$optattr->change($k,%$v,tm=>$tm);
+	} }
+	#
+	return Schedule::Activity::Message->new(message=>$message,attributes=>$$msg{attributes}//{});
+}
+
 sub findpath {
 	my (%opt)=@_;
 	my ($tm,$slack,$buffer,@res)=(0,0,0);
 	my $tension=1-($opt{tension}//0.5);
 	my ($node,$conclusion)=($opt{start},$opt{finish});
+	my %attributes;
+	if($ATTRDEV) { $opt{attr}->push() }
+	if($ATTRDEV) { if($opt{attr}) { while(my ($k,$v)=each %{$opt{attr}{attr}}) { $attributes{$k}=$$v{value} } } }
 	while($node&&($node ne $conclusion)) {
 		push @res,[$tm,$node];
+		if($ATTRDEV) { push @{$res[-1]},nodeattrdev($opt{attr},$tm+$opt{tmoffset},$node,\%attributes) }
+		if(0&&$ATTRDEV) { print STDERR "ATTR:  ",join(',',map {"$_=".$attributes{$_}} sort(keys %attributes)),"\n" }
 		$node->increment(\$tm,\$slack,\$buffer);
 		if(
 			($tm+$tension*$buffer>=$opt{goal})
@@ -81,26 +120,36 @@ sub findpath {
 			&&($node->hasnext($conclusion))
 		) {
 			push @res,[$tm,$conclusion];
+			if($ATTRDEV) { push @{$res[-1]},nodeattrdev($opt{attr},$tm+$opt{tmoffset},$conclusion,\%attributes) }
+			if(0&&$ATTRDEV) { print STDERR "ATTR:  ",join(',',map {"$_=".$attributes{$_}} sort(keys %attributes)),"\n" }
 			$conclusion->increment(\$tm,\$slack,\$buffer);
 			$node=undef;
 		}
 		elsif($tm>=$opt{goal}) {
 			if($node->hasnext($conclusion)) {
 				push @res,[$tm,$conclusion];
+				if($ATTRDEV) { push @{$res[-1]},nodeattrdev($opt{attr},$tm+$opt{tmoffset},$conclusion,\%attributes) }
+				if(0&&$ATTRDEV) { print STDERR "ATTR:  ",join(',',map {"$_=".$attributes{$_}} sort(keys %attributes)),"\n" }
 				$conclusion->increment(\$tm,\$slack,\$buffer);
 				$node=undef;
 			}
 			elsif($tm-$opt{goal}<$slack) { $node=$node->nextrandom() }
-			elsif($opt{backtracks}>0) { return (retry=>1,error=>"No backtracking support") }
+			elsif($opt{backtracks}>0) { 
+				if($ATTRDEV) { $opt{attr}->pop() }
+				return (retry=>1,error=>"No backtracking support");
+			}
 			else { die 'this needs to backtrack or retry' }
 		}
 		else { $node=$node->nextrandom(not=>$conclusion) }
 	}
 	if($node&&($node eq $conclusion)) {
 		push @res,[$tm,$conclusion];
+		if($ATTRDEV) { push @{$res[-1]},nodeattrdev($opt{attr},$tm+$opt{tmoffset},$conclusion,\%attributes) }
+		if(0&&$ATTRDEV) { print STDERR "ATTR:  ",join(',',map {"$_=".$attributes{$_}} sort(keys %attributes)),"\n" }
 		$conclusion->increment(\$tm,\$slack,\$buffer);
 		$node=undef;
 	}
+	if($ATTRDEV) { $opt{attr}->pop() }
 	return (
 		steps =>\@res,
 		tm    =>$tm,
@@ -130,6 +179,8 @@ sub scheduler {
 		tension   =>$opt{tension},
 		retries   =>$opt{retries},
 		backtracks=>2*$opt{retries},
+		attr      =>$opt{attr},
+		tmoffset  =>$opt{tmoffset},
 	);
 	if($path{retry}) { return scheduler(%opt,retries=>$opt{retries},error=>$path{error}//'Retries exhausted') }
 	my @res=@{$path{steps}};

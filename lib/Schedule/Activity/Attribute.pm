@@ -75,6 +75,26 @@ sub xy {
 	return map {[$_,$$self{log}{$_}]} sort {$a<=>$b} keys %{$$self{log}};
 }
 
+sub dump {
+	my ($self)=@_;
+	my %res=(
+		type=>$$self{type},
+		value=>$$self{value},
+		log=>{ %{$$self{log}} },
+	);
+	return %res;
+}
+
+sub restore {
+	my ($class,%opt)=@_;
+	my %self=(
+		type =>$opt{type}//'int',
+		value=>$opt{value}//0,
+		log  =>$opt{log}//{},
+	);
+	return bless(\%self,$class);
+}
+
 # set=>value
 # incr=>value
 # decr=>value

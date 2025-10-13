@@ -10,8 +10,8 @@ sub new {
 	my ($ref,%opt)=@_;
 	my $class=ref($ref)||$ref;
 	my %self=(
-		attr    =>{},
-		# internal=>{}, # not yet needed
+		attr =>{},
+		stack=>[],
 	);
 	return bless(\%self,$class);
 }
@@ -52,6 +52,23 @@ sub report {
 	my %res;
 	while(my ($k,$v)=each %{$$self{attr}}) { %{$res{$k}}=$v->report() }
 	return %res;
+}
+
+sub push {
+	my ($self)=@_;
+	my %state;
+	while(my ($k,$v)=each %{$$self{attr}}) { %{$state{$k}}=$v->dump() }
+	push @{$$self{stack}},\%state;
+	return $self;
+}
+
+sub pop {
+	my ($self)=@_;
+	if(!@{$$self{stack}}) { return $self }
+	my %state=%{pop @{$$self{stack}}};
+	%{$$self{attr}}=();
+	while(my ($k,$v)=each %state) { $$self{attr}{$k}=Schedule::Activity::Attribute->restore(%$v) }
+	return $self;
 }
 
 1;
