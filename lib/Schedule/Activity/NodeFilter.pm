@@ -9,6 +9,7 @@ our $VERSION='0.1.3';
 my %property=map {$_=>undef} qw/f attr op value boolean filters/;
 my %matcher=(
 	boolean=>\&matchBoolean,
+	elapsed=>\&matchElapsed,
 	value  =>\&matchValue,
 );
 
@@ -23,26 +24,35 @@ sub new {
 }
 
 sub matches {
-	my ($self,%attributes)=@_;
-	return &{$matcher{$$self{f}}}($self,%attributes);
+	my ($self,$tm,%attributes)=@_;
+	return &{$matcher{$$self{f}}}($self,$tm,%attributes);
 }
 
 sub matchBoolean {
-	my ($self,%attributes)=@_;
+	my ($self,$tm,%attributes)=@_;
 	if($$self{boolean} eq 'and') {
 		my $res=1;
 		foreach my $filter (@{$$self{filters}}) {
-			if(is_plain_hashref($filter)) { $res&&=__PACKAGE__->new(%$filter)->matches(%attributes) }
-			else                          { $res&&=$filter->matches(%attributes) }
+			if(is_plain_hashref($filter)) { $res&&=__PACKAGE__->new(%$filter)->matches($tm,%attributes) }
+			else                          { $res&&=$filter->matches($tm,%attributes) }
 			if(!$res) { return 0 }
 		}
 		return $res;
 	}
 	if($$self{boolean} eq 'or') {
-		my $res=9;
+		my $res=0;
 		foreach my $filter (@{$$self{filters}}) {
-			if(is_plain_hashref($filter)) { $res||=__PACKAGE__->new(%$filter)->matches(%attributes) }
-			else                          { $res||=$filter->matches(%attributes) }
+			if(is_plain_hashref($filter)) { $res||=__PACKAGE__->new(%$filter)->matches($tm,%attributes) }
+			else                          { $res||=$filter->matches($tm,%attributes) }
+			if($res) { return 1 }
+		}
+		return $res;
+	}
+	if($$self{boolean} eq 'nand') {
+		my $res=0;
+		foreach my $filter (@{$$self{filters}}) {
+			if(is_plain_hashref($filter)) { $res||=!__PACKAGE__->new(%$filter)->matches($tm,%attributes) }
+			else                          { $res||=!$filter->matches($tm,%attributes) }
 			if($res) { return 1 }
 		}
 		return $res;
@@ -50,8 +60,21 @@ sub matchBoolean {
 	return 0;
 }
 
+sub matchElapsed {
+	my ($self,$tm,%attributes)=@_;
+	my $v=$attributes{$$self{attr}}//{};
+	$v=$$v{tmmax};
+	if(defined($v)) {
+		$v=$tm-$v;
+		return __PACKAGE__
+			->new(f=>'value',attr=>'timecheck',op=>$$self{op},value=>$$self{value})
+			->matches(undef,timecheck=>{value=>$v});
+	}
+	return 0;
+}
+
 sub matchValue {
-	my ($self,%attributes)=@_;
+	my ($self,$tm,%attributes)=@_;
 	my $v=$attributes{$$self{attr}}//{};
 	if($$self{f} eq 'value') { $v=$$v{value} }
 	else { die "Not yet available $$self{f}" }
@@ -75,59 +98,70 @@ __END__
 
 =head1 NAME
 
-Schedule::Activity::NodeFilter - Selection mechanism for node randomization
+Schedule::Activity::NodeFilter - Evaluate if attributes match logical expressions
 
 =head1 SYNOPSIS
 
   my $filter=Schedule::Activity::NodeFilter->new(
-		...
-		to be defined
-		...
-	);
+    f    =>'value/avg/elapsed'
+    attr =>'attribute name'
+    op   =>'lt/gt/le/ge/eq/ne'
+    value=>number
+    #
+    boolean=>'and/or/nand'
+    filters=>[...]
+  );
 
-	if($filter->matches(%attributes)) { ... }
+  if($filter->matches($tm,%attributes)) { ... }
 
 =head1 DESCRIPTION
 
-... prototype/proof of concept
+TODO.
 
-... on thing undecided here, question:  Is there any benefit to a 'scoring' approach, where candidates are ordered by score?  Certainly there needs to be exact matches to remove nodes that don't meet the requirements (such as limit=1), but it's going to be hard to detect scheduling failure "reasons" in that case.  But what's the benefit of a softer require statement?  Presumably annotations already have restrictions for 'between', is that what's needed here?  
+=head1 VALUE FILTERS
 
-What about timestamp based restrictions?  Example, "at least 7min since the last appearance of this node"???  Presumably the attribute could be attribute=>{now=>1}, 
+=head2 Attribute values
 
-Currently there's no way to copy attributes, not sure that would be needed but what would the syntax be?  attribute=>{copy=>'name'}.  So I guess now=>1 is okay, I don't know what other values are really going to be needed.
+A filter that directly checks attribute values as C<attribute op value> can be created with
 
+  f    =>'value',
+  attr =>'name',
+  op   =>'lt/gt/le/ge/eq/ne',
+  value=>number,
 
-  {
-    f    =>'value', # the default, to check the attribute value
-    attr =>'name',
-    op   =>'lt/gt/le/ge/eq/ne',
-    value=>number,
-  }
-  {
-    f    =>'avg', # to check not the attribute value but the average
-    attr =>'name',
-    op   =>'operator',
-    value=>number,
-  }
-  {
-    f    =>'elapsed', # compare as (now-attr) op value
-    attr =>'name',
-    op   =>'operator'
-    value=>seconds,
-  }
-  {
-    boolean=>'and/or/not',
-    filters=>[...],
-  }
-  {
-    ...
-  }
-  {
-    ...
-  }
+It is not necessary to pass C<f=value>, which is the default.  If the attribute value is undefined, the match is false.  All other operators are I<numeric> and are self explanatory.  (This might change, but currently there is no proposal/use case to support setting attributes with string values.)
 
+=head2 Attribute averages
 
+(not yet available) A filter that uses the current average value of an attribute as C<average op value> can be created with
 
+  f    =>'avg',
+  attr =>'name',
+  op   =>'operator',
+  value=>number,
+
+=head2 Elapsed time
+
+To control "time between actions", a filter can be used to check the elapsed time since an integer attribute was stored by evaluating C<(now-attribute time) op value> with
+
+  f    =>'elapsed',
+  attr =>'name',
+  op   =>'operator'
+  value=>seconds,
+
+For any attribute, the most recent recorded event is used as the attribute time.  To record a timestamp for an integer attribute without changing its value, use C<incr=0>.
+
+=head1 BOOLEAN EXPRESSIONS
+
+A boolean filter supports AND, OR, and NAND expressions as follows:
+
+  boolean=>'and/or/nand',
+  filters=>[...],
+
+The C<filters> are any list of one or more filters of any type.  That is, C<AND> is the conjunction over I<all> filters in the list (all must be true).  The C<OR> is the disjunction over all filters in the list (at least one must be true).
+
+The Boolean NOT may be implemented as C<boolean=nand, filters=[filter]>, because the NAND operator is implemented via DeMorgan's Laws as C<!A || !B || ...>.
+
+All operators support short-circuiting.
 
 =cut
