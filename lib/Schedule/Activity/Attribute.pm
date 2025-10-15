@@ -44,16 +44,16 @@ sub validateConfig {
 
 sub log {
 	my ($self,$tm)=@_;
-	if(!defined($tm))      { return $self }
-	if($tm>=$$self{tmmax}) { $$self{log}{$tm}=$$self{value}; $$self{tmmax}=$tm }
-	else                   { $$self{avg}=$$self{tmsum}=undef }
+	if(defined($tm)&&($tm>=$$self{tmmax})) { $$self{log}{$tm}=$$self{value}; $$self{tmmax}=$tm }
+	# historic entry is not currently supported
 	return $self;
 }
 
 sub change {
 	my ($self,%opt)=@_;
 	my $tm=$opt{tm}//$$self{tmmax};
-	if($tm<$$self{tmmax}) { return $self }
+	if($tm<$$self{tmmax}) { return $self } # historic entry is not currently supported
+	#
 	&{$types{$$self{type}}{change}}($self,%opt);
 	$self->log($tm); # updates tmmax
 	if(!defined($$self{avg})) { $self->average() }
@@ -207,11 +207,11 @@ Attributes are intended to be I<typed>, so cross-type requests may produce failu
 
 =head2 change
 
-Ideally called as C<$attr->change(tm=>tm,options)>, this updates the value of the attribute and logs at the given timestamp.  Change options must be type-appropriate.  The specified time must exceed (or be the same as) the maximum logged time for the attribute to have any effect.  That is, historical values don't update the current value, nor do they create an entry in the log.
+Ideally called as C<$attr->change(tm=>tm,options)>, this updates the value of the attribute and logs at the given timestamp.  Change options must be type-appropriate.  The specified time must exceed (or be the same as) the maximum logged time for the attribute to have any effect.  That is, historical requests are a no-op:  They don't update the current value, nor do they create an entry in the log.
 
 Called without a timestamp, the maximum time will be assumed, the value changed, and the logged entry overwritten.
 
-Historic entry is proposed by not yet defined, since it must support C<set> and C<incr> options.
+Historic entry is proposed by not yet defined, since it must support C<set> and C<incr> options and handle updates to the rolling average.
 
 =head2 value
 
@@ -219,7 +219,7 @@ The value of the attribute associated with the logged event having the maximum t
 
 =head2 average
 
-Computes the type-specific time-weighted "average value" over all entries in the log.  Currently this is a heavy action that requires recalculation for each call, making it accurate but slow.
+Computes the type-specific time-weighted "average value" over all entries in the log.  Averages are maintained for integers and booleans on the fly, so they can be referenced at any time without performance impact.
 
 =head2 report
 
@@ -241,7 +241,7 @@ Returns errors if any of the keys in an attribute configuration are unavailable 
 
 Called with a timestamp as C<$attr->log(tm)> to create a log entry of the current value.  This is public so callers can establish a "checkpoint" where the value is known/unchanged, typically at boundaries of events or scheduling windows.
 
-Does nothing if the indicated time is below the maximum logged time.
+Does nothing if the indicated time is below the maximum logged time.  Historic entry is proposed by not defined (see 'change' above).
 
 =head2 dump
 
