@@ -2,9 +2,9 @@ package Schedule::Activity::NodeFilter;
 
 use strict;
 use warnings;
-use Ref::Util qw/is_hashref is_plain_hashref/;
+use Ref::Util qw/is_plain_hashref/;
 
-our $VERSION='0.1.3';
+our $VERSION='0.1.4';
 
 my %property=map {$_=>undef} qw/f attr op value boolean filters/;
 my %matcher=(
