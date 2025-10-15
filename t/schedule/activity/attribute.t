@@ -3,7 +3,7 @@
 use strict;
 use warnings;
 use Schedule::Activity::Attribute;
-use Test::More tests=>7;
+use Test::More tests=>8;
 
 subtest 'init'=>sub {
 	plan tests=>9;
@@ -81,6 +81,28 @@ subtest 'Log/avg:  Integer'=>sub {
 	is_deeply($$attr{log},{0=>0,1=>12,3=>22,7=>0},'Log');
 	is($attr->average(),12,'Weighted average');
 };
+
+# t  x
+# 0  0
+# 2  1
+# 4  0
+# 6  1
+# 8  0
+subtest 'Log/avg:  Boolean'=>sub {
+	plan tests=>2;
+	my $attr=Schedule::Activity::Attribute->new(type=>'bool',value=>0,tm=>0);
+	$attr->change(set=>1,tm=>2);
+	$attr->change(set=>0,tm=>4);
+	$attr->change(set=>1,tm=>6);
+	$attr->change(set=>0,tm=>8);
+	my $expect=0.50;
+	is_deeply($$attr{log},{0=>0,2=>1,4=>0,6=>1,8=>0},'Log');
+	is($attr->average(),0.5,'Weighted average');
+};
+
+# Missing test:  If an historical entry is logged, the average is removed.
+# Ergo, when ->avg is called, the average is fully recomputed.
+# But it should get stored so subsequent calls don't have to recompute.
 
 subtest 'Dump/Restore'=>sub {
 	plan tests=>11;

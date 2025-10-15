@@ -35,7 +35,7 @@ sub register {
 sub log {
 	my ($self,$tm)=@_;
 	if(!defined($tm)) { return $self }
-	foreach my $A (values %{$$self{attr}}) { $A->log($tm) }
+	foreach my $A (values %{$$self{attr}}) { $A->change(tm=>$tm,_log=>1) }
 	return $self;
 }
 

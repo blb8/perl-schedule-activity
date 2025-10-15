@@ -26,6 +26,8 @@ sub new {
 		value=>$opt{value}//0,
 		log  =>{},
 		tmmax=>$opt{tm}//0,
+		avg  =>undef,
+		tmsum=>undef,
 	);
 	if(!defined($types{$self{type}})) { die "Attribute invalid type:  $self{type}" }
 	$self{log}{$opt{tm}//0}=$self{value};
@@ -42,7 +44,9 @@ sub validateConfig {
 
 sub log {
 	my ($self,$tm)=@_;
-	if(defined($tm)&&($tm>=$$self{tmmax})) { $$self{log}{$tm}=$$self{value}; $$self{tmmax}=$tm }
+	if(!defined($tm))      { return $self }
+	if($tm>=$$self{tmmax}) { $$self{log}{$tm}=$$self{value}; $$self{tmmax}=$tm }
+	else                   { $$self{avg}=$$self{tmsum}=undef }
 	return $self;
 }
 
@@ -52,6 +56,7 @@ sub change {
 	if($tm<$$self{tmmax}) { return $self }
 	&{$types{$$self{type}}{change}}($self,%opt);
 	$self->log($tm); # updates tmmax
+	if(!defined($$self{avg})) { $self->average() }
 	return $self;
 }
 
@@ -72,6 +77,7 @@ sub value {
 
 sub average {
 	my ($self)=@_;
+	if(defined($$self{avg})) { return $$self{avg} }
 	return &{$types{$$self{type}}{average}}($$self{log});
 }
 
@@ -110,9 +116,19 @@ sub _xy {
 # tm=>tm # optional, will create a log entry
 sub _changeInt {
 	my ($self,%opt)=@_;
+	my $ya=$$self{value};
 	if(defined($opt{set})) { $$self{value}=$opt{set} }
 	if($opt{incr})         { $$self{value}+=$opt{incr} }
 	if($opt{decr})         { $$self{value}-=$opt{decr} }
+	if($opt{_log})         { }
+	#
+	my $dt=($opt{tm}//$$self{tmmax})-$$self{tmmax};
+	if($dt==0) { $$self{avg}=$$self{tmsum}=undef }
+	elsif(defined($$self{avg})) {
+		$$self{avg}=$$self{avg}*($$self{tmsum}/($$self{tmsum}+$dt))+0.5*($ya+$$self{value})*($dt/($$self{tmsum}+$dt));
+		$$self{tmsum}+=$dt;
+	}
+	else { $$self{avg}=0.5*($ya+$$self{value}); $$self{tmsum}+=$dt }
 	return $self;
 }
 
@@ -120,7 +136,17 @@ sub _changeInt {
 # tm=>tm # optional, will create a log entry
 sub _changeBool {
 	my ($self,%opt)=@_;
+	my $ya=$$self{value};
 	if(defined($opt{set})) { $$self{value}=$opt{set} }
+	if($opt{_log})         { }
+	#
+	my $dt=($opt{tm}//$$self{tmmax})-$$self{tmmax};
+	if($dt==0) { $$self{avg}=$$self{tmsum}=undef }
+	elsif(defined($$self{avg})) {
+		$$self{avg}=$$self{avg}*$$self{tmsum}/($$self{tmsum}+$dt)+$dt*$ya/($$self{tmsum}+$dt);
+		$$self{tmsum}+=$dt;
+	}
+	else { $$self{avg}=$ya; $$self{tmsum}+=$dt }
 	return $self;
 }
 
@@ -149,6 +175,7 @@ sub _avgBool {
 		$lasttm=$tm;
 		$lasty=$$log{$tm};
 	}
+	if($weight==0) { return 0 }
 	return $sum/$weight;
 }
 
