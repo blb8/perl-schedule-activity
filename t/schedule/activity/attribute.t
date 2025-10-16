@@ -3,7 +3,7 @@
 use strict;
 use warnings;
 use Schedule::Activity::Attribute;
-use Test::More tests=>7;
+use Test::More tests=>8;
 
 subtest 'init'=>sub {
 	plan tests=>9;
@@ -77,9 +77,29 @@ subtest 'Log/avg:  Integer'=>sub {
 	$attr->change(set=>12,tm=>1);
 	$attr->change(set=>22,tm=>3);
 	$attr->change(set=> 0,tm=>7);
+	$attr->change(set=> 0,tm=>2); # this should be a noop, guarantees that historical logging is not supported
 	my $expect=(1*6+2*17+4*11)/7;
 	is_deeply($$attr{log},{0=>0,1=>12,3=>22,7=>0},'Log');
 	is($attr->average(),12,'Weighted average');
+};
+
+# t  x
+# 0  0
+# 2  1
+# 4  0
+# 6  1
+# 8  0
+subtest 'Log/avg:  Boolean'=>sub {
+	plan tests=>2;
+	my $attr=Schedule::Activity::Attribute->new(type=>'bool',value=>0,tm=>0);
+	$attr->change(set=>1,tm=>2);
+	$attr->change(set=>0,tm=>4);
+	$attr->change(set=>1,tm=>6);
+	$attr->change(set=>0,tm=>8);
+	$attr->change(set=>1,tm=>4); # this should be a noop, guarantees that historical logging is not supported
+	my $expect=0.50;
+	is_deeply($$attr{log},{0=>0,2=>1,4=>0,6=>1,8=>0},'Log');
+	is($attr->average(),0.5,'Weighted average');
 };
 
 subtest 'Dump/Restore'=>sub {

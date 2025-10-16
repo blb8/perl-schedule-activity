@@ -43,13 +43,15 @@ sub validateConfig {
 sub log {
 	my ($self,$tm)=@_;
 	if(defined($tm)&&($tm>=$$self{tmmax})) { $$self{log}{$tm}=$$self{value}; $$self{tmmax}=$tm }
+	# historic entry is not currently supported
 	return $self;
 }
 
 sub change {
 	my ($self,%opt)=@_;
 	my $tm=$opt{tm}//$$self{tmmax};
-	if($tm<$$self{tmmax}) { return $self }
+	if($tm<$$self{tmmax}) { return $self } # historic entry is not currently supported
+	#
 	&{$types{$$self{type}}{change}}($self,%opt);
 	$self->log($tm); # updates tmmax
 	return $self;
@@ -113,6 +115,7 @@ sub _changeInt {
 	if(defined($opt{set})) { $$self{value}=$opt{set} }
 	if($opt{incr})         { $$self{value}+=$opt{incr} }
 	if($opt{decr})         { $$self{value}-=$opt{decr} }
+	if($opt{_log})         { }
 	return $self;
 }
 
@@ -121,6 +124,7 @@ sub _changeInt {
 sub _changeBool {
 	my ($self,%opt)=@_;
 	if(defined($opt{set})) { $$self{value}=$opt{set} }
+	if($opt{_log})         { }
 	return $self;
 }
 
@@ -149,6 +153,7 @@ sub _avgBool {
 		$lasttm=$tm;
 		$lasty=$$log{$tm};
 	}
+	if($weight==0) { return 0 }
 	return $sum/$weight;
 }
 
