@@ -102,10 +102,6 @@ subtest 'Log/avg:  Boolean'=>sub {
 	is($attr->average(),0.5,'Weighted average');
 };
 
-# Missing test:  If an historical entry is logged, the average is removed.
-# Ergo, when ->avg is called, the average is fully recomputed.
-# But it should get stored so subsequent calls don't have to recompute.
-
 subtest 'Dump/Restore'=>sub {
 	plan tests=>11;
 	my $attr=Schedule::Activity::Attribute->new(type=>'int',value=>0,tm=>0);

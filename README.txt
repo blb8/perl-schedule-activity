@@ -1,8 +1,13 @@
-"Schedule::Activity" Version 0.1.4
+"Schedule::Activity" Version 0.1.5
 
 Abstract:
 ---------
 This package provides a mechanism to construct "random" schedules of events using a graph-based configuration of activities and actions.  Action scheduling allows cycles/recursion to meet activity schedule goals.
+
+What's new in version 0.1.5:
+--------------------------
+* Attributes use rolling averages for efficiency.
+* The 0.1.4 update fixed attribute historic entry, but it never really worked "properly" and has been removed as it is not needed in the scheduler.
 
 What's new in version 0.1.4:
 --------------------------
