@@ -1,6 +1,6 @@
 Revision history for Schedule::Activity
 
-0.1.5 - 2025-..-..
+0.1.5 - 2025-10-15
 	- Attributes use rolling averages
 	- Attributes don't support historic update
 
