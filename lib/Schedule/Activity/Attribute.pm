@@ -26,6 +26,8 @@ sub new {
 		value=>$opt{value}//0,
 		log  =>{},
 		tmmax=>$opt{tm}//0,
+		avg  =>undef,
+		tmsum=>undef,
 	);
 	if(!defined($types{$self{type}})) { die "Attribute invalid type:  $self{type}" }
 	$self{log}{$opt{tm}//0}=$self{value};
@@ -54,6 +56,7 @@ sub change {
 	#
 	&{$types{$$self{type}}{change}}($self,%opt);
 	$self->log($tm); # updates tmmax
+	if(!defined($$self{avg})) { $self->average() }
 	return $self;
 }
 
@@ -74,6 +77,7 @@ sub value {
 
 sub average {
 	my ($self)=@_;
+	if(defined($$self{avg})) { return $$self{avg} }
 	return &{$types{$$self{type}}{average}}($$self{log});
 }
 
@@ -112,10 +116,19 @@ sub _xy {
 # tm=>tm # optional, will create a log entry
 sub _changeInt {
 	my ($self,%opt)=@_;
+	my $ya=$$self{value};
 	if(defined($opt{set})) { $$self{value}=$opt{set} }
 	if($opt{incr})         { $$self{value}+=$opt{incr} }
 	if($opt{decr})         { $$self{value}-=$opt{decr} }
 	if($opt{_log})         { }
+	#
+	my $dt=($opt{tm}//$$self{tmmax})-$$self{tmmax};
+	if($dt==0) { $$self{avg}=$$self{tmsum}=undef }
+	elsif(defined($$self{avg})) {
+		$$self{avg}=$$self{avg}*($$self{tmsum}/($$self{tmsum}+$dt))+0.5*($ya+$$self{value})*($dt/($$self{tmsum}+$dt));
+		$$self{tmsum}+=$dt;
+	}
+	else { $$self{avg}=0.5*($ya+$$self{value}); $$self{tmsum}+=$dt }
 	return $self;
 }
 
@@ -123,8 +136,17 @@ sub _changeInt {
 # tm=>tm # optional, will create a log entry
 sub _changeBool {
 	my ($self,%opt)=@_;
+	my $ya=$$self{value};
 	if(defined($opt{set})) { $$self{value}=$opt{set} }
 	if($opt{_log})         { }
+	#
+	my $dt=($opt{tm}//$$self{tmmax})-$$self{tmmax};
+	if($dt==0) { $$self{avg}=$$self{tmsum}=undef }
+	elsif(defined($$self{avg})) {
+		$$self{avg}=$$self{avg}*$$self{tmsum}/($$self{tmsum}+$dt)+$dt*$ya/($$self{tmsum}+$dt);
+		$$self{tmsum}+=$dt;
+	}
+	else { $$self{avg}=$ya; $$self{tmsum}+=$dt }
 	return $self;
 }
 
@@ -185,11 +207,11 @@ Attributes are intended to be I<typed>, so cross-type requests may produce failu
 
 =head2 change
 
-Ideally called as C<$attr->change(tm=>tm,options)>, this updates the value of the attribute and logs at the given timestamp.  Change options must be type-appropriate.  The specified time must exceed (or be the same as) the maximum logged time for the attribute to have any effect.  That is, historical values don't update the current value, nor do they create an entry in the log.
+Ideally called as C<$attr->change(tm=>tm,options)>, this updates the value of the attribute and logs at the given timestamp.  Change options must be type-appropriate.  The specified time must exceed (or be the same as) the maximum logged time for the attribute to have any effect.  That is, historical requests are a no-op:  They don't update the current value, nor do they create an entry in the log.
 
 Called without a timestamp, the maximum time will be assumed, the value changed, and the logged entry overwritten.
 
-Historic entry is proposed by not yet defined, since it must support C<set> and C<incr> options.
+Historic entry is proposed by not yet defined, since it must support C<set> and C<incr> options and handle updates to the rolling average.
 
 =head2 value
 
@@ -197,7 +219,7 @@ The value of the attribute associated with the logged event having the maximum t
 
 =head2 average
 
-Computes the type-specific time-weighted "average value" over all entries in the log.  Currently this is a heavy action that requires recalculation for each call, making it accurate but slow.
+Computes the type-specific time-weighted "average value" over all entries in the log.  Averages are maintained for integers and booleans on the fly, so they can be referenced at any time without performance impact.
 
 =head2 report
 
@@ -219,7 +241,7 @@ Returns errors if any of the keys in an attribute configuration are unavailable 
 
 Called with a timestamp as C<$attr->log(tm)> to create a log entry of the current value.  This is public so callers can establish a "checkpoint" where the value is known/unchanged, typically at boundaries of events or scheduling windows.
 
-Does nothing if the indicated time is below the maximum logged time.
+Does nothing if the indicated time is below the maximum logged time.  Historic entry is proposed by not defined (see 'change' above).
 
 =head2 dump
 
