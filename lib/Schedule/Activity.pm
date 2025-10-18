@@ -582,7 +582,7 @@ A scheduling configuration may contain a list of common messages.  This is parti
   %configuration=(
     messages=>{
       'key name'=>{ any regular message configuration }
-			...
+      ...
     },
   )
 
