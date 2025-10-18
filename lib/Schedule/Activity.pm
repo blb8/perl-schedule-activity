@@ -97,7 +97,6 @@ sub findpath {
 	while($node&&($node ne $conclusion)) {
 		push @res,[$tm,$node];
 		if($ATTRDEV) { push @{$res[-1]},nodeattrdev($opt{attr},$tm+$opt{tmoffset},$node) }
-		if(1&&$ATTRDEV) { print STDERR "ATTR:  ",join(',',map {"$_=".$opt{attr}{attr}{$_}{value}} sort(keys %{$opt{attr}{attr}})),"\n" }
 		$node->increment(\$tm,\$slack,\$buffer);
 		if(
 			($tm+$tension*$buffer>=$opt{goal})
@@ -106,7 +105,6 @@ sub findpath {
 		) {
 			push @res,[$tm,$conclusion];
 			if($ATTRDEV) { push @{$res[-1]},nodeattrdev($opt{attr},$tm+$opt{tmoffset},$conclusion) }
-			if(1&&$ATTRDEV) { print STDERR "ATTR:  ",join(',',map {"$_=".$opt{attr}{attr}{$_}{value}} sort(keys %{$opt{attr}{attr}})),"\n" }
 			$conclusion->increment(\$tm,\$slack,\$buffer);
 			$node=undef;
 		}
@@ -114,23 +112,21 @@ sub findpath {
 			if($node->hasnext($conclusion)) {
 				push @res,[$tm,$conclusion];
 				if($ATTRDEV) { push @{$res[-1]},nodeattrdev($opt{attr},$tm+$opt{tmoffset},$conclusion) }
-				if(1&&$ATTRDEV) { print STDERR "ATTR:  ",join(',',map {"$_=".$opt{attr}{attr}{$_}{value}} sort(keys %{$opt{attr}{attr}})),"\n" }
 				$conclusion->increment(\$tm,\$slack,\$buffer);
 				$node=undef;
 			}
-			elsif($tm-$opt{goal}<$slack) { $node=$node->nextrandom(attr=>$opt{attr}{attr}) }
+			elsif($tm-$opt{goal}<$slack) { $node=$node->nextrandom(tm=>$tm,attr=>$opt{attr}{attr}) }
 			elsif($opt{backtracks}>0) { 
 				if($ATTRDEV) { $opt{attr}->pop() }
 				return (retry=>1,error=>"No backtracking support");
 			}
 			else { die 'this needs to backtrack or retry' }
 		}
-		else { $node=$node->nextrandom(not=>$conclusion,attr=>$opt{attr}{attr}) }
+		else { $node=$node->nextrandom(not=>$conclusion,tm=>$tm,attr=>$opt{attr}{attr}) }
 	}
 	if($node&&($node eq $conclusion)) {
 		push @res,[$tm,$conclusion];
 		if($ATTRDEV) { push @{$res[-1]},nodeattrdev($opt{attr},$tm+$opt{tmoffset},$conclusion) }
-		if(1&&$ATTRDEV) { print STDERR "ATTR:  ",join(',',map {"$_=".$opt{attr}{attr}{$_}{value}} sort(keys %{$opt{attr}{attr}})),"\n" }
 		$conclusion->increment(\$tm,\$slack,\$buffer);
 		$node=undef;
 	}
