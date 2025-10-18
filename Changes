@@ -1,6 +1,7 @@
 Revision history for Schedule::Activity
 
-0.1.6 - 2025-..-..
+0.1.6 - 2025-10-18
+	- Node filtering
 	- Attributes rolling average, fix dump/restore/reset
 
 0.1.5 - 2025-10-15
