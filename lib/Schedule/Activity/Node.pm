@@ -5,8 +5,6 @@ use warnings;
 use List::Util qw/any/;
 use Scalar::Util qw/looks_like_number/;
 
-use Schedule::Activity::NodeFilter; # TESTING
-
 our $VERSION='0.1.5';
 
 my %property=map {$_=>undef} qw/tmmin tmavg tmmax next finish message attribute note attributes require/;
@@ -105,9 +103,7 @@ sub nextrandom {
 		if($opt{not}&&($opt{not} eq $next)) { next }
 		if(!ref($next)) { push @candidates,$next; next }
 		if($$next{require}&&$opt{attr}) {
-			my $filter=Schedule::Activity::NodeFilter->new(%{$$next{require}});
-			if(!$filter->matches($opt{tm},%{$opt{attr}})) { next }
-		}
+			if(!$$next{require}->matches($opt{tm},%{$opt{attr}})) { next } }
 		push @candidates,$next;
 	}
 	if(!@candidates) { return }

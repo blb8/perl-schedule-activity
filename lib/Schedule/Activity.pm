@@ -7,6 +7,7 @@ use Schedule::Activity::Annotation;
 use Schedule::Activity::Attributes;
 use Schedule::Activity::Message;
 use Schedule::Activity::Node;
+use Schedule::Activity::NodeFilter;
 
 our $VERSION='0.1.5';
 
@@ -25,6 +26,7 @@ sub buildConfig {
 		else       { delete($$node{next}) }
 		if(defined($$node{finish})) { $$node{finish}=$res{node}{$$node{finish}} }
 		$$node{msg}=Schedule::Activity::Message->new(message=>$$node{message},names=>$msgNames);
+		if(is_plain_hashref($$node{require})) { $$node{require}=Schedule::Activity::NodeFilter->new(%{$$node{require}}) }
 	}
 	return %res;
 }
