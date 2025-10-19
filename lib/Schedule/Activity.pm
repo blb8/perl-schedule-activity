@@ -85,46 +85,21 @@ sub nodeMessage {
 sub findpath {
 	my (%opt)=@_;
 	my ($tm,$slack,$buffer,@res)=(0,0,0);
-	my $tension=1-($opt{tension}//0.5);
-	if   ($tension<0) { $tension=0 }
-	elsif($tension>1) { $tension=1 }
+	my %tension=(
+		slack =>1-($opt{tensionslack} //$opt{tension}//0.5),
+		buffer=>1-($opt{tensionbuffer}//$opt{tension}//0.5),
+	);
+	foreach my $k (qw/slack buffer/) { if($tension{$k}>1){$tension{$k}=1}; if($tension{$k}<0){$tension{$k}=0} }
 	my ($node,$conclusion)=($opt{start},$opt{finish});
 	$opt{attr}->push();
 	while($node&&($node ne $conclusion)) {
 		push @res,[$tm,$node];
 		push @{$res[-1]},nodeMessage($opt{attr},$tm+$opt{tmoffset},$node);
 		$node->increment(\$tm,\$slack,\$buffer);
-		if(
-			($tm+$tension*$buffer>=$opt{goal})
-			&&($opt{goal}-$tm<=$buffer)
-			&&($node->hasnext($conclusion))
-		) {
-			push @res,[$tm,$conclusion];
-			push @{$res[-1]},nodeMessage($opt{attr},$tm+$opt{tmoffset},$conclusion);
-			$conclusion->increment(\$tm,\$slack,\$buffer);
-			$node=undef;
-		}
-		elsif($tm>=$opt{goal}) {
-			if($node->hasnext($conclusion)) {
-				push @res,[$tm,$conclusion];
-				push @{$res[-1]},nodeMessage($opt{attr},$tm+$opt{tmoffset},$conclusion);
-				$conclusion->increment(\$tm,\$slack,\$buffer);
-				$node=undef;
-			}
-			elsif($tm-$opt{goal}<$slack) { $node=$node->nextrandom(tm=>$tm,attr=>$opt{attr}{attr}) }
-			elsif($opt{backtracks}>0) { $opt{attr}->pop(); return (retry=>1,error=>"No backtracking support") }
-			else { die 'this needs to backtrack or retry' }
-		}
-		elsif(
-			($node->hasnext($conclusion))
-			&&($tm+$buffer+$$conclusion{tmmax}>=$opt{goal})
-		) {
-			push @res,[$tm,$conclusion];
-			push @{$res[-1]},nodeMessage($opt{attr},$tm+$opt{tmoffset},$conclusion);
-			$conclusion->increment(\$tm,\$slack,\$buffer);
-			$node=undef;
-		}
-		else { $node=$node->nextrandom(not=>$conclusion,tm=>$tm,attr=>$opt{attr}{attr}) }
+		if($tm+$tension{buffer}*$buffer<$opt{goal})  { $node=$node->nextrandom(not=>$conclusion,tm=>$tm,attr=>$opt{attr}{attr})//$node->nextrandom(tm=>$tm,attr=>$opt{attr}{attr}) }
+		elsif($tm-$tension{slack}*$slack<$opt{goal}) { $node=$node->nextrandom(tm=>$tm,attr=>$opt{attr}{attr}) } # tm+buffer>=goal
+		elsif($node->hasnext($conclusion)) { $node=$conclusion }
+		else { $node=$node->nextrandom(not=>$conclusion,tm=>$tm,attr=>$opt{attr}{attr})//$node->nextrandom(tm=>$tm,attr=>$opt{attr}{attr}) }
 	}
 	if($node&&($node eq $conclusion)) {
 		push @res,[$tm,$conclusion];
@@ -159,11 +134,12 @@ sub scheduler {
 		start     =>$opt{node},
 		finish    =>$opt{node}{finish},
 		goal      =>$opt{goal},
-		tension   =>$opt{tension},
 		retries   =>$opt{retries},
 		backtracks=>2*$opt{retries},
 		attr      =>$opt{attr},
 		tmoffset  =>$opt{tmoffset},
+		tensionslack =>$opt{tensionslack} //$opt{tension},
+		tensionbuffer=>$opt{tensionbuffer}//$opt{tension},
 	);
 	if($path{retry}) { return scheduler(%opt,retries=>$opt{retries},error=>$path{error}//'Retries exhausted') }
 	my @res=@{$path{steps}};

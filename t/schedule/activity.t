@@ -142,7 +142,7 @@ subtest 'Failures'=>sub {
 	eval { %schedule=Schedule::Activity::buildSchedule(configuration=>\%configuration,activities=>[[18,'Activity']]) };
 	like($@,qr/(?i:excess exceeds slack)/,'Insufficient slack');
 	eval { %schedule=Schedule::Activity::buildSchedule(configuration=>\%configuration,activities=>[[42,'Activity']]) };
-	like($@,qr/(?i:didn't reach finish)/,'Insufficient buffer');
+	like($@,qr/(?i:shortage exceeds buffer)/,'Insufficient buffer');
 };
 
 subtest 'cycles'=>sub {

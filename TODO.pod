@@ -36,7 +36,7 @@ The case C<limit=1> is not the primary/initial use case of this scheduler, but s
 
 =head2 Tension configuration
 
-Scheduling tension is currently only available for buffer time, but it should also be configurable for slack time.  Note that this setting is related to the current one-alternative bug, because it restricts finding an otherwise-filtered node when scheduling near the maximum buffer.
+Partially available in 0.1.7.  Scheduling tension is currently only available for buffer time, but it should also be configurable for slack time.  In 0.1.7, tension settings affect path selection, but the scheduler will fail for the fullpath if there is insufficient slack/buffer to adjust the path to the goal time.  This may change in the future, namely the tension settings may permit scheduling completion even if the measured slack/buffer wouldn't otherwise permit adjustment.
 
 =head2 Slack/buffer defaults
 
