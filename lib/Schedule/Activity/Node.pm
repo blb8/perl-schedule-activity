@@ -95,7 +95,6 @@ sub increment {
 sub nextrandom {
 	my ($self,%opt)=@_;
 	if(!$$self{next}) { return }
-	if($#{$$self{next}}==0) { return $$self{next}[0] } # this shouldn't be needed
 	my @candidates;
 	foreach my $next (@{$$self{next}}) {
 		if($opt{not}&&($opt{not} eq $next)) { next }

@@ -86,6 +86,8 @@ sub findpath {
 	my (%opt)=@_;
 	my ($tm,$slack,$buffer,@res)=(0,0,0);
 	my $tension=1-($opt{tension}//0.5);
+	if   ($tension<0) { $tension=0 }
+	elsif($tension>1) { $tension=1 }
 	my ($node,$conclusion)=($opt{start},$opt{finish});
 	$opt{attr}->push();
 	while($node&&($node ne $conclusion)) {
@@ -112,6 +114,15 @@ sub findpath {
 			elsif($tm-$opt{goal}<$slack) { $node=$node->nextrandom(tm=>$tm,attr=>$opt{attr}{attr}) }
 			elsif($opt{backtracks}>0) { $opt{attr}->pop(); return (retry=>1,error=>"No backtracking support") }
 			else { die 'this needs to backtrack or retry' }
+		}
+		elsif(
+			($node->hasnext($conclusion))
+			&&($tm+$buffer+$$conclusion{tmmax}>=$opt{goal})
+		) {
+			push @res,[$tm,$conclusion];
+			push @{$res[-1]},nodeMessage($opt{attr},$tm+$opt{tmoffset},$conclusion);
+			$conclusion->increment(\$tm,\$slack,\$buffer);
+			$node=undef;
 		}
 		else { $node=$node->nextrandom(not=>$conclusion,tm=>$tm,attr=>$opt{attr}{attr}) }
 	}
@@ -157,7 +168,7 @@ sub scheduler {
 	if($path{retry}) { return scheduler(%opt,retries=>$opt{retries},error=>$path{error}//'Retries exhausted') }
 	my @res=@{$path{steps}};
 	my ($tm,$slack,$buffer)=@path{qw/tm slack buffer/};
-	if($res[-1][1] ne $opt{node}{finish}) { die "Didn't reach finish node" }
+	if($res[-1][1] ne $opt{node}{finish}) { return scheduler(%opt,retries=>$opt{retries},error=>"Didn't reach finish node") }
 	#
 	my $excess=$tm-$opt{goal};
 	if(abs($excess)>0.5) {
@@ -615,10 +626,6 @@ During scheduling, filtering is evaluated as a I<single pass> only, per activity
 
 This should never affect attributes used for a stateful/flag/counter-based filter, because those value changes will still occur in the same sequence.
 
-=head2 Bugs
-
-Note:  As of version 0.1.6, there is an optimization that a C<next> list of only a single item will I<always> select that as the next action.  See BUGS for more details.  As a workaround, duplicate that entry in the next list to force filtering.
-
 =head1 IMPORT MECHANISMS
 
 =head2 Markdown
@@ -646,7 +653,7 @@ The full settings needed to build a schedule can be loaded with C<%settings=load
 
 It is possible for some settings to get stuck in an infinite loop:  Be cautious setting C<tmavg=0> for actions.
 
-There is currently a limitation with scheduling to the maximum buffer that is dependent on the behavior that a list of next actions with only a single entry will return that entry (even if it would have been otherwise filtered).  The exceptions need to be updated so that the maximum buffer includes the tmmax of the conclusion node itself, otherwise the conclusion node will get filtered out and scheduling will fail.
+(This should be fixed in 0.1.7).  There is currently a limitation with scheduling to the maximum buffer that is dependent on the behavior that a list of next actions with only a single entry will return that entry (even if it would have been otherwise filtered).  The exceptions need to be updated so that the maximum buffer includes the tmmax of the conclusion node itself, otherwise the conclusion node will get filtered out and scheduling will fail.
 
 =head1 SEE ALSO
 

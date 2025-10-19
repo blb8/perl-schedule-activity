@@ -142,7 +142,7 @@ subtest 'Failures'=>sub {
 	eval { %schedule=Schedule::Activity::buildSchedule(configuration=>\%configuration,activities=>[[18,'Activity']]) };
 	like($@,qr/(?i:excess exceeds slack)/,'Insufficient slack');
 	eval { %schedule=Schedule::Activity::buildSchedule(configuration=>\%configuration,activities=>[[42,'Activity']]) };
-	like($@,qr/(?i:shortage exceeds buffer)/,'Insufficient buffer');
+	like($@,qr/(?i:didn't reach finish)/,'Insufficient buffer');
 };
 
 subtest 'cycles'=>sub {
@@ -443,7 +443,7 @@ subtest 'Named messages'=>sub {
 			},
 		},
 	);
-	%schedule=Schedule::Activity::buildSchedule(configuration=>\%configuration,activities=>[[300,'Activity']]);
+	%schedule=Schedule::Activity::buildSchedule(configuration=>\%configuration,activities=>[[500,'Activity']]);
 	my %result;
 	foreach my $message (map {$$_[1]{message}} @{$schedule{activities}}) { $result{string}{$message}=1 }
 	foreach my $attr (qw/attr1 attr21 attr22/) { $result{attr}{$attr}=($schedule{attributes}{$attr}{y}>0?1:0) }

@@ -24,7 +24,7 @@ Node filtering is experimental starting in 0.1.6.  Filters support Booleans and 
 
 =head2 Near-buffer limitation
 
-See L<Schedule::Activity/BUGS>.  If a conclusion node can be reached, there are more circumstances where it should be chosen to complete scheduling.  The arithmetic for available buffer time should be updated to include the tmmax of the final node, where applicable.
+(Should be fixed in 0.1.7) See L<Schedule::Activity/BUGS>.  If a conclusion node can be reached, there are more circumstances where it should be chosen to complete scheduling.  The arithmetic for available buffer time should be updated to include the tmmax of the final node, where applicable.
 
 =head2 Tutorial
 
