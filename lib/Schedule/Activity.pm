@@ -11,6 +11,83 @@ use Schedule::Activity::NodeFilter;
 
 our $VERSION='0.1.6';
 
+sub new {
+	my ($ref,%opt)=@_;
+	my $class=ref($ref)||$ref;
+	my %self=(
+		config  =>$opt{configuration}//{},
+		attr    =>undef,
+		valid   =>0,
+		compiled=>0,
+		built   =>undef,
+	);
+	return bless(\%self,$class);
+}
+
+# validate()
+# compile()
+# schedule(activities=>[...])
+
+sub _attr {
+	my ($self)=@_;
+	$$self{attr}//=Schedule::Activity::Attributes->new();
+	return $$self{attr};
+}
+
+sub validate {
+	my ($self,$force)=@_;
+	if($$self{valid}&&!$force) { return }
+	$$self{config}//={}; if(!is_hashref($$self{config})) { return ('Configuration must be a hash') }
+	my @errors=validateConfig($self->_attr(),%{$$self{config}});
+	if(!@errors) { $$self{valid}=1 }
+	return @errors;
+}
+
+sub compile {
+	my ($self)=@_;
+	if($$self{compiled}) { return }
+	my @errors=$self->validate();
+	if(@errors) { return (error=>\@errors) }
+	%{$$self{built}}=buildConfig(%{$$self{config}});
+	return;
+}
+
+sub schedule {
+	my ($self,%opt)=@_;
+	my %check=$self->compile(); if($check{error}) { return (error=>$check{error}) }
+	if(!is_arrayref($opt{activities}))            { return (error=>'Activities must be an array') }
+	my ($tmoffset,%res)=(0);
+	foreach my $activity (@{$opt{activities}}) {
+		foreach my $entry (scheduler(goal=>$$activity[0],node=>$$self{built}{node}{$$activity[1]},config=>$$self{built},attr=>$self->_attr(),tmoffset=>$tmoffset)) {
+			push @{$res{activities}},[$$entry[0]+$tmoffset,@$entry[1..$#$entry]];
+		}
+		$tmoffset+=$$activity[0];
+		$self->_attr()->log($tmoffset); # potentially overwritten by subsequent nodes
+	}
+	%{$res{attributes}}=$self->_attr()->report();
+	while(my ($group,$notes)=each %{$$self{config}{annotations}}) {
+		my @schedule;
+		foreach my $note (@$notes) {
+			my $annotation=Schedule::Activity::Annotation->new(%$note);
+			foreach my $note ($annotation->annotate(@{$res{activities}})) {
+				my ($message,$mobj)=Schedule::Activity::Message->new(message=>$$note[1]{message},names=>$$self{config}{messages}//{})->random();
+				my %node=(message=>$message);
+				if($$note[1]{annotations}) { $node{annotations}=$$note[1]{annotations} }
+				push @schedule,[$$note[0],\%node,@$note[2..$#$note]];
+			}
+		}
+		@schedule=sort {$$a[0]<=>$$b[0]} @schedule;
+		for(my $i=0;$i<$#schedule;$i++) {
+			if($schedule[$i+1][0]==$schedule[$i][0]) {
+				splice(@schedule,$i+1,1); $i-- } }
+		$res{annotations}{$group}{events}=\@schedule;
+	}
+	return %res;
+}
+
+
+# --------------- older, static functions past here ---------------
+
 sub buildConfig {
 	my (%base)=@_;
 	my %res;
@@ -66,6 +143,10 @@ sub validateConfig {
 		if(@invalids) { push @errors,"Node $k, Undefined name in array:  next" }
 		if(defined($$node{finish})&&!defined($config{node}{$$node{finish}})) { push @errors,"Node $k, Undefined name:  finish" }
 	}
+	$config{annotations}//={};
+	if(!is_hashref($config{annotations})) { push @errors,'Annotations must be a hash' }
+	else { while(my ($k,$notes)=each %{$config{annotations}}) {
+		push @errors,map {"Annotation $k:  $_"} map {Schedule::Activity::Annotation::validate(%$_)} @$notes } }
 	return @errors;
 }
 
@@ -195,45 +276,7 @@ sub scheduler {
 
 sub buildSchedule {
 	my (%opt)=@_;
-	my $attr=Schedule::Activity::Attributes->new();
-	if(!is_hashref($opt{configuration})) { $opt{configuration}={} }
-	if(!is_arrayref($opt{activities}))   { $opt{activities}=[] }
-	if(!is_hashref($opt{configuration}{annotations})) { $opt{configuration}{annotations}={} }
-	#
-	my @errors=validateConfig($attr,%{$opt{configuration}});
-	while(my ($k,$notes)=each %{$opt{configuration}{annotations}}) {
-		push @errors,map {"Annotation $k:  $_"} map {Schedule::Activity::Annotation::validate(%$_)} @$notes }
-
-	if(@errors) { return (error=>\@errors) }
-	my %config=buildConfig(%{$opt{configuration}});
-	#
-	my ($tmoffset,%res)=(0);
-	foreach my $activity (@{$opt{activities}}) {
-		foreach my $entry (scheduler(goal=>$$activity[0],node=>$config{node}{$$activity[1]},config=>\%config,attr=>$attr,tmoffset=>$tmoffset)) {
-			push @{$res{activities}},[$$entry[0]+$tmoffset,@$entry[1..$#$entry]];
-		}
-		$tmoffset+=$$activity[0];
-		$attr->log($tmoffset); # potentially overwritten by subsequent nodes
-	}
-	%{$res{attributes}}=$attr->report();
-	while(my ($group,$notes)=each %{$opt{configuration}{annotations}}) {
-		my @schedule;
-		foreach my $note (@$notes) {
-			my $annotation=Schedule::Activity::Annotation->new(%$note);
-			foreach my $note ($annotation->annotate(@{$res{activities}})) {
-				my ($message,$mobj)=Schedule::Activity::Message->new(message=>$$note[1]{message},names=>$opt{configuration}{messages}//{})->random();
-				my %node=(message=>$message);
-				if($$note[1]{annotations}) { $node{annotations}=$$note[1]{annotations} }
-				push @schedule,[$$note[0],\%node,@$note[2..$#$note]];
-			}
-		}
-		@schedule=sort {$$a[0]<=>$$b[0]} @schedule;
-		for(my $i=0;$i<$#schedule;$i++) {
-			if($schedule[$i+1][0]==$schedule[$i][0]) {
-				splice(@schedule,$i+1,1); $i-- } }
-		$res{annotations}{$group}{events}=\@schedule;
-	}
-	return %res;
+	return __PACKAGE__->new(configuration=>$opt{configuration})->schedule(activities=>$opt{activities});
 }
 
 sub loadMarkdown {
