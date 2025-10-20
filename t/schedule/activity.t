@@ -3,7 +3,7 @@
 use strict;
 use warnings;
 use Schedule::Activity;
-use Test::More tests=>13;
+use Test::More tests=>14;
 
 subtest 'validation'=>sub {
 	plan tests=>2;
@@ -515,6 +515,35 @@ subtest 'Node filtering'=>sub {
 		if($seen{'Begin action 2'}) { $pass=0 }
 	}
 	ok($pass,'Always blocked node never appears');
+};
+
+subtest 'Sanity checks'=>sub {
+	plan tests=>4;
+	my ($scheduler,@errors);
+	$scheduler=Schedule::Activity->new(configuration=>{node=>{
+		activity=>{
+			tmavg=>5,
+			next=>['action1'],
+			finish=>'finish',
+		},
+		'action1'=>{
+			tmavg=>0,
+			next=>['action1','action2'],
+		},
+		'action2'=>{
+			tmavg=>5,
+			next=>[],
+		},
+		finish=>{
+			tmavg=>5,
+		},
+	}});
+	$scheduler->compile();
+	@errors=$scheduler->safetyChecks();
+	like($errors[0],qr/unreachable/,'Activity finish unreachable');
+	like($errors[1],qr/No progress/,'tmavg=0');
+	like($errors[2],qr/Dangling node action/,'Dangling node');
+	like($errors[3],qr/Dangling node action/,'Dangling node');
 };
 
 subtest 'Markdown loading'=>sub {

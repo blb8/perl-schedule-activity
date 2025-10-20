@@ -18,7 +18,6 @@ sub new {
 		config  =>$opt{configuration}//{},
 		attr    =>undef,
 		valid   =>0,
-		compiled=>0,
 		built   =>undef,
 	);
 	return bless(\%self,$class);
@@ -43,12 +42,89 @@ sub validate {
 	return @errors;
 }
 
+# This will only perform checks pre-activity-request, so some values might need to be stashed for later.
+# All of these will ignore filtering; these are just sanity checks
+#
+# ip   Shortest path through nodes (minimum scheduling time possible)
+# ip   Maximum time (or undef if infinite)
+# ready Reachability (can the finish node be reached at all)
+# ready Action nodes with tmavg=0 (these make no progress)
+# ready Nodes that get stuck (that is every node should reach some finish)
+# todo Nodes that are reachable from more than one activity
+#
+sub safetyChecks {
+	my ($self)=@_;
+	my (@errors,$changed);
+	my %reach=(min=>{},max=>{});
+	foreach my $namea (keys %{$$self{built}{node}}) {
+		my $nodea=$$self{built}{node}{$namea};
+		foreach my $nodeb (@{$$nodea{next}}) {
+			$reach{min}{$nodea}{$nodeb}=$$nodea{tmmin};
+			$reach{max}{$nodea}{$nodeb}=(($nodea eq $nodeb)?'+':$$nodea{tmmax});
+		}
+	}
+	$changed=1;
+	while($changed) { $changed=0;
+		foreach my $nodea (keys %{$reach{min}}) {
+		foreach my $nodeb (keys %{$reach{min}{$nodea}}) {
+		foreach my $nodec (keys %{$reach{min}{$nodeb}}) {
+			my $x=$reach{min}{$nodea}{$nodec};
+			my $y=$reach{min}{$nodea}{$nodeb}+$reach{min}{$nodeb}{$nodec};
+			if(!defined($x)||($x>$y)) {
+				$reach{min}{$nodea}{$nodec}=$y;
+				$changed=1;
+			}
+		} } }
+	}
+	my $triadd=sub {
+		my ($x,$y)=@_;
+		if($x eq '+') { return '+' }
+		if($y eq '+') { return '+' }
+		return $x+$y;
+	};
+	$changed=1;
+	while($changed) { $changed=0;
+		foreach my $nodea (keys %{$reach{max}}) {
+		foreach my $nodeb (keys %{$reach{max}{$nodea}}) {
+		foreach my $nodec (keys %{$reach{max}{$nodeb}}) {
+			my $x=$reach{max}{$nodea}{$nodec};
+			if(defined($x)&&($x eq '+')) { next }
+			my $y=&$triadd($reach{max}{$nodea}{$nodeb},$reach{max}{$nodeb}{$nodec});
+			if(!defined($x)||($y eq '+')||($x<$y)) {
+				$reach{max}{$nodea}{$nodec}=$y;
+				$changed=1;
+			}
+		} } }
+	}
+	foreach my $activity (grep {$$self{built}{node}{$_}{finish}} keys %{$$self{built}{node}}) {
+		my $nodea=$$self{built}{node}{$activity};
+		my $nodeb=$$nodea{finish};
+		if(!defined($reach{min}{$nodea}{$nodeb})) { push @errors,"Finish for activity $activity is unreachable"; next }
+	}
+	foreach my $name (grep {$$self{built}{node}{$_}{next}} keys %{$$self{built}{node}}) {
+		if($$self{built}{node}{$name}{tmavg}==0) { push @errors,"No progress will be made for action $name" }
+	}
+	my @finishers=map {$$_{finish}} grep {$$_{finish}} values %{$$self{built}{node}};
+	foreach my $name (keys %{$$self{built}{node}}) {
+		my $node=$$self{built}{node}{$name};
+		if($$node{finish}) { next } # dealt with above
+		my $finishes=0;
+		for(my $i=0;$i<=$#finishers;$i++) {
+			if($finishers[$i] eq $node)                        { $finishes=1; $i=$#finishers }
+			elsif(defined($reach{min}{$node}{$finishers[$i]})) { $finishes=1; $i=$#finishers }
+		}
+		if(!$finishes) { push @errors,"Dangling node $name" }
+	}
+	return @errors;
+}
+
 sub compile {
 	my ($self)=@_;
-	if($$self{compiled}) { return }
+	if($$self{built}) { return }
 	my @errors=$self->validate();
 	if(@errors) { return (error=>\@errors) }
 	%{$$self{built}}=buildConfig(%{$$self{config}});
+	# return $self->safetyChecks();
 	return;
 }
 
