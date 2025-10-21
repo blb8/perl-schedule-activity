@@ -19,6 +19,7 @@ sub new {
 		attr    =>undef,
 		valid   =>0,
 		built   =>undef,
+		reach   =>undef,
 	);
 	return bless(\%self,$class);
 }
@@ -42,21 +43,9 @@ sub validate {
 	return @errors;
 }
 
-# These checks ignore any filtering that might be active during construction; these are only sanity checks.
-# Recommend stashing the reachability results in $self for later.
-#
-# Here are the tests and their defined orders.
-# 1.  Activity that cannot reach finish
-# 2.  Orphaned actions (no activity reaches them)
-# 3.  Dual-parent action nodes (with more than a single root activity)  NOT(item2)
-# 4.  Dual-finish action nodes  NOT(item3)
-# 5.  Dangling actions (cannot reach their finish node)  NOT(item1||item4)
-# 6.  Action nodes with tmavg=0  NOT(activity|finish) (this is only a problem if there's a cycle)
-#
-#
-sub safetyChecks {
+sub _reachability { # UNTESTED (directly)
 	my ($self)=@_;
-	my (@errors,$changed);
+	my $changed;
 	my %reach=(min=>{},max=>{});
 	foreach my $namea (keys %{$$self{built}{node}}) {
 		my $nodea=$$self{built}{node}{$namea};
@@ -98,6 +87,26 @@ sub safetyChecks {
 			}
 		} } }
 	}
+	$$self{reach}=\%reach;
+	return $self;
+}
+
+# These checks ignore any filtering that might be active during construction; these are only sanity checks.
+# Recommend stashing the reachability results in $self for later.
+#
+# Here are the tests and their defined orders.
+# 1.  Activity that cannot reach finish
+# 2.  Orphaned actions (no activity reaches them)
+# 3.  Dual-parent action nodes (with more than a single root activity)  NOT(item2)
+# 4.  Dual-finish action nodes  NOT(item3)
+# 5.  Dangling actions (cannot reach their finish node)  NOT(item1||item4)
+# 6.  Action nodes with tmavg=0  NOT(activity|finish) (this is only a problem if there's a cycle)
+#
+sub safetyChecks {
+	my ($self)=@_;
+	my (@errors,$changed);
+	$self->_reachability();
+	my %reach=%{$$self{reach}};
 	#
 	# Be very cautious about names versus stringified references.
 	my $builtNode=$$self{built}{node};
@@ -134,7 +143,8 @@ sub compile {
 	my @errors=$self->validate();
 	if(@errors) { return (error=>\@errors) }
 	%{$$self{built}}=buildConfig(%{$$self{config}});
-	# return $self->safetyChecks();
+	# @errors=$self->safetyChecks();
+	# if(@errors) { return (error=>\@errors) }
 	return;
 }
 
