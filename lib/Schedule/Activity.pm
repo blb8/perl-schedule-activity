@@ -42,15 +42,17 @@ sub validate {
 	return @errors;
 }
 
-# This will only perform checks pre-activity-request, so some values might need to be stashed for later.
-# All of these will ignore filtering; these are just sanity checks
+# These checks ignore any filtering that might be active during construction; these are only sanity checks.
+# Recommend stashing the reachability results in $self for later.
 #
-# ip   Shortest path through nodes (minimum scheduling time possible)
-# ip   Maximum time (or undef if infinite)
-# ready Reachability (can the finish node be reached at all)
-# ready Action nodes with tmavg=0 (these make no progress)
-# ready Nodes that get stuck (that is every node should reach some finish)
-# todo Nodes that are reachable from more than one activity
+# Here are the tests and their defined orders.
+# 1.  Activity that cannot reach finish
+# 2.  Orphaned actions (no activity reaches them)
+# 3.  Dual-parent action nodes (with more than a single root activity)  NOT(item2)
+# 4.  Dual-finish action nodes  NOT(item3)
+# 5.  Dangling actions (cannot reach their finish node)  NOT(item1||item4)
+# 6.  Action nodes with tmavg=0  NOT(activity|finish) (this is only a problem if there's a cycle)
+#
 #
 sub safetyChecks {
 	my ($self)=@_;
@@ -96,25 +98,33 @@ sub safetyChecks {
 			}
 		} } }
 	}
-	foreach my $activity (grep {$$self{built}{node}{$_}{finish}} keys %{$$self{built}{node}}) {
-		my $nodea=$$self{built}{node}{$activity};
-		my $nodeb=$$nodea{finish};
-		if(!defined($reach{min}{$nodea}{$nodeb})) { push @errors,"Finish for activity $activity is unreachable"; next }
+	#
+	# Be very cautious about names versus stringified references.
+	my $builtNode=$$self{built}{node};
+	my %activities=map {$$builtNode{$_}=>$$builtNode{$_}{finish}} grep {defined($$builtNode{$_}{finish})} keys(%$builtNode);
+	my %finishes=map {$_=>1} values(%activities);
+	my %actions=map {$_=>$$builtNode{$_}} grep {!exists($activities{$$builtNode{$_}})&&!exists($finishes{$$builtNode{$_}})} keys(%$builtNode);
+	#
+	my %incompleteActivities=map {$_=>1} grep{!defined($reach{min}{$_}{$activities{$_}})} keys(%activities);
+	push @errors,map {"Finish for activity $_ is unreachable"} keys(%incompleteActivities);
+	#
+	my (%orphans,%dualParent,%dualFinish,%dangling,%infiniteCycle);
+	foreach my $action (keys %actions) {
+		my $parents=0;
+		my $terminals=0;
+		foreach my $activity (keys %activities) { if($reach{min}{$activity}{$actions{$action}}) { $parents++ } }
+		foreach my $finish   (keys %finishes)   { if($reach{min}{$actions{$action}}{$finish})   { $terminals++ } }
+		if($parents==0)    { $orphans{$action}=1 }
+		elsif($parents>1)  { $dualParent{$action}=1 }
+		if($terminals>1)   { $dualFinish{$action}=1 }
+		elsif(!$terminals) { $dangling{$action}=1 }
+		if(($actions{$action}{tmavg}==0)&&(defined($reach{min}{$actions{$action}}{$actions{$action}}))) { $infiniteCycle{$action}=1 }
 	}
-	foreach my $name (grep {$$self{built}{node}{$_}{next}} keys %{$$self{built}{node}}) {
-		if($$self{built}{node}{$name}{tmavg}==0) { push @errors,"No progress will be made for action $name" }
-	}
-	my @finishers=map {$$_{finish}} grep {$$_{finish}} values %{$$self{built}{node}};
-	foreach my $name (keys %{$$self{built}{node}}) {
-		my $node=$$self{built}{node}{$name};
-		if($$node{finish}) { next } # dealt with above
-		my $finishes=0;
-		for(my $i=0;$i<=$#finishers;$i++) {
-			if($finishers[$i] eq $node)                        { $finishes=1; $i=$#finishers }
-			elsif(defined($reach{min}{$node}{$finishers[$i]})) { $finishes=1; $i=$#finishers }
-		}
-		if(!$finishes) { push @errors,"Dangling node $name" }
-	}
+	push @errors,map {"Action $_ belongs to no activity"} keys(%orphans);
+	push @errors,map {"Action $_ belongs to multiple activities"} keys(%dualParent);
+	push @errors,map {"Action $_ reaches multiple finish nodes"} keys(%dualFinish);
+	push @errors,map {"Dangling action $_"} keys(%dangling);
+	push @errors,map {"No progress will be made for action $_"} keys(%infiniteCycle);
 	return @errors;
 }
 

@@ -518,7 +518,7 @@ subtest 'Node filtering'=>sub {
 };
 
 subtest 'Sanity checks'=>sub {
-	plan tests=>4;
+	plan tests=>7;
 	my ($scheduler,@errors);
 	$scheduler=Schedule::Activity->new(configuration=>{node=>{
 		activity=>{
@@ -537,13 +537,32 @@ subtest 'Sanity checks'=>sub {
 		finish=>{
 			tmavg=>5,
 		},
+		'activityB'=>{
+			tmavg=>5,
+			next=>['actionA'],
+			finish=>'finishB',
+		},
+		'actionA'=>{
+			tmavg=>5,
+			next=>['finishB','action2','finish'],
+		},
+		finishB=>{
+			tmavg=>5,
+		},
+		orphan=>{
+			tmavg=>5,
+			next=>['finishB'],
+		},
 	}});
 	$scheduler->compile();
 	@errors=$scheduler->safetyChecks();
-	like($errors[0],qr/unreachable/,'Activity finish unreachable');
-	like($errors[1],qr/No progress/,'tmavg=0');
-	like($errors[2],qr/Dangling node action/,'Dangling node');
-	like($errors[3],qr/Dangling node action/,'Dangling node');
+	like($errors[0],qr/unreachable/,                    'Activity finish unreachable');
+	like($errors[1],qr/orphan belongs to no activity/,  'orphan');
+	like($errors[2],qr/action2 .*multiple activities/,  'dual parents');
+	like($errors[3],qr/actionA .*multiple finish/,      'dual finish');
+	like($errors[4],qr/Dangling action/,                'Dangling node');
+	like($errors[5],qr/Dangling action/,                'Dangling node');
+	like($errors[6],qr/No progress/,                    'tmavg=0');
 };
 
 subtest 'Markdown loading'=>sub {
