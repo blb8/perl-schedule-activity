@@ -2,6 +2,24 @@
 
 =head1 Features
 
+=head2 Tentative Version Changes
+
+=item 0.1.7
+
+Introduce the object interface, configurable tension for slack and buffer, fixed next[0] handling, fixed/improved non-deterministic tests.
+
+=item 0.1.8
+
+Introduce commandline, compile mode and pre-scheduling safety checks.
+
+=item 0.1.9
+
+C<buildSchedule> should warn about deprecation, TBD...
+
+=item 0.2.0
+
+Switch to the object-only interface.
+
 =head2 Scheduling
 
 Multiple proposals are being considered for rescheduling, scheduling adjustment to target different attributes, as well as attribute-level goals.  Other feature improvements below are related to scheduling.
@@ -92,7 +110,7 @@ Goals can never be met if slack/buffers are zero and the activity time requested
 
 =head2 Support full object configurations
 
-The current validation logic assumes plain hash references in several spots, but a user should be able to build an object-oriented collection of Nodes etcetera and still call buildSchedule, without manually overriding the pre-validation flag.
+The current validation logic assumes plain hash references in several spots, but a user should be able to build an object-oriented collection of Nodes etcetera and still call schedule, without manually overriding the pre-validation flag.
 
 =head2 Backtracking behavior
 

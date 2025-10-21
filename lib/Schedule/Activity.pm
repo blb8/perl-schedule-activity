@@ -150,6 +150,7 @@ sub compile {
 
 sub schedule {
 	my ($self,%opt)=@_;
+	delete($$self{attr});
 	my %check=$self->compile(); if($check{error}) { return (error=>$check{error}) }
 	if(!is_arrayref($opt{activities}))            { return (error=>'Activities must be an array') }
 	my ($tmoffset,%res)=(0);
@@ -434,7 +435,7 @@ Version 0.1.6
 =head1 SYNOPSIS
 
   use Schedule::Activity;
-  my %schedule=Schedule::Activity::buildSchedule(
+  my $scheduler=Schedule::Activity->new(
     configuration=>{
       node=>{
         Activity=>{
@@ -461,12 +462,13 @@ Version 0.1.6
       annotations=>{...},
       attributes =>{...},
       messages   =>{...},
-    },
-    activities=>[
-      [30,'Activity'],
-      ...
-    ],
-  );
+    }
+	);
+  my %schedule=$scheduler->schedule(activities=>[
+		[30,'Activity'],
+		...
+	]);
+  if($schedule{error}) { die join("\n",@{$schedule{error}}) }
   print join("\n",map {"$$_[0]:  $$_[1]{message}"} @{$schedule{activities}});
 
 =head1 DESCRIPTION
@@ -476,6 +478,8 @@ This module permits building schedules of I<activities> each containing randomly
 For additional examples, see the C<samples/> directory.
 
 Areas subject to change are documented below.  Configurations and goals may lead to cases that currently C<die()>, so callers should plan to trap and handle these exceptions accordingly.
+
+Note:  The static method C<Schedule::Activity::buildSchedule> will be removed in version 0.2.0.
 
 =head1 CONFIGURATION
 
@@ -549,7 +553,7 @@ Message selection is randomized for arrays and a hash of alternates.  Any attrib
 
 =head1 RESPONSE
 
-The response from C<buildSchedule> is:
+The response from C<schedule(activities=>[...])> is:
 
   %schedule=(
     error=>['list of validation errors, if any',...],
@@ -585,7 +589,7 @@ Caution:  While startup/conclusion of activities may have fixed time specificati
 
 =head1 ATTRIBUTES
 
-Attributes permit tracking boolean or numeric values during schedule construction.  The result of C<buildSchedule> contains attribute information that can be used to verify or adjust the schedule.
+Attributes permit tracking boolean or numeric values during schedule construction.  The result of C<schedule> contains attribute information that can be used to verify or adjust the schedule.
 
 =head2 Types
 
@@ -619,7 +623,7 @@ Attributes within message alternate configurations and named messages are identi
 
 =head2 Response values
 
-The response from C<buildSchedule> includes an C<attributes> section as:
+The response from C<schedule> includes an C<attributes> section as:
 
   attributes=>{
     name=>{
@@ -684,7 +688,7 @@ A scheduling configuration may contain a list of annotations:
     },
   )
 
-Scheduling I<annotations> are a collection of secondary events to be attached to the built schedule and are configured as described in L<Schedule::Activity::Annotation>.  Each named group can have one or more annotation.  Each annotation will be inserted around the matching actions in the schedule and be reported from C<buildSchedule> in the annotations section as:
+Scheduling I<annotations> are a collection of secondary events to be attached to the built schedule and are configured as described in L<Schedule::Activity::Annotation>.  Each named group can have one or more annotation.  Each annotation will be inserted around the matching actions in the schedule and be reported from C<schedule> in the annotations section as:
 
   annotations=>{
     'group'=>{
@@ -697,9 +701,9 @@ Scheduling I<annotations> are a collection of secondary events to be attached to
 
 Within an individual group, earlier annotations take priority if two events are scheduled at the same time.  Multiple groups of annotations may have conflicting event schedules with event overlap.  Note that the C<between> setting is only enforced for each annotation individually at this time.
 
-Annotations do I<not> update the C<attributes> response from C<buildSchedule>.  Because annotations may themselves contain attributes, they are retained separately from the main schedule of activities to permit easier rebuilding.  At this time, however, the caller must verify that annotation schedules before merging them and their attributes into the schedule.  Annotations may also be built separately after schedule construction as described in L<Schedule::Activity::Annotation>.
+Annotations do I<not> update the C<attributes> response from C<schedule>.  Because annotations may themselves contain attributes, they are retained separately from the main schedule of activities to permit easier rebuilding.  At this time, however, the caller must verify that annotation schedules before merging them and their attributes into the schedule.  Annotations may also be built separately after schedule construction as described in L<Schedule::Activity::Annotation>.
 
-Annotations may use named messages, and messages in the annotations response structure are materialized using the named message configuration passed to C<buildSchedule>.
+Annotations may use named messages, and messages in the annotations response structure are materialized using the named message configuration passed to C<schedule>.
 
 =head1 NAMED MESSAGES
 
@@ -762,7 +766,7 @@ Any list identification markers may be used interchangably (number plus period, 
 
 The imported configuration permits an activity to be followed by any of its actions, and any action can be followed by any other action within the activity (but not itself).  Any action can terminate the activity.
 
-The full settings needed to build a schedule can be loaded with C<%settings=loadMarkdown(text)>, and both C<$settings{configuration}> and C<$settings{activities}> will be defined so an immediate call to C<%schedule=buildSchedule(%settings)> can be made.
+The full settings needed to build a schedule can be loaded with C<%settings=loadMarkdown(text)>, and both C<$settings{configuration}> and C<$settings{activities}> will be defined so an immediate call to C<schedule(%settings)> can be made.
 
 =head1 BUGS
 
