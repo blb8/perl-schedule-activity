@@ -4,6 +4,8 @@
 
 =head2 Tentative Version Changes
 
+=over
+
 =item 0.1.7
 
 Introduce the object interface, tension setting for slack and buffer, fixed next[0] handling, fixed/improved non-deterministic tests.
@@ -19,6 +21,8 @@ C<buildSchedule> should warn about deprecation, TBD...
 =item 0.2.0
 
 Switch to the object-only interface.
+
+=back
 
 =head2 Scheduling
 

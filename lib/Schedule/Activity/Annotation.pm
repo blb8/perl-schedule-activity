@@ -87,7 +87,7 @@ Schedule::Activity::Annotation - Schedule around other events
     limit  =>3,
     attributes=>{...},
   );
-  
+
   my @notes=$annotation->annotate(@{$schedule{activities}});
   @{$schedule{activities}}=sort {$$a[0]<=>$$b[0]} @{$schedule{activities}},@notes;
 
