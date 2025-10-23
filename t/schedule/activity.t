@@ -153,7 +153,7 @@ subtest 'cycles'=>sub {
 		'cycle'=>{tmmin=>100,tmavg=>200,tmmax=>400,next=>['cycle','terminate']},
 		'terminate'=>{tmmin=>0,tmavg=>0,tmmax=>0},
 	}});
-	my %schedule=$scheduler->schedule(activities=>[[4321,'root']]);
+	my %schedule=$scheduler->schedule(unsafe=>1,activities=>[[4321,'root']]);
 	ok($#{$schedule{activities}}>10,'Self-cycle');
 };
 
@@ -491,7 +491,7 @@ subtest 'Node filtering'=>sub {
 	$pass=1;
 	$scheduler=Schedule::Activity->new(configuration=>\%configuration);
 	foreach (1..20) {
-		%schedule=$scheduler->schedule(activities=>[[20,'Activity']]);
+		%schedule=$scheduler->schedule(unsafe=>1,activities=>[[20,'Activity']]);
 		%seen=map {$$_[1]{message}=>1} @{$schedule{activities}};
 		if(!defined($seen{'Begin action 1'})||defined($seen{'Begin action 2'})) { $pass=0 }
 	}

@@ -20,6 +20,7 @@ sub new {
 		valid   =>0,
 		built   =>undef,
 		reach   =>undef,
+		unsafe  =>$opt{unsafe}//1, # default to 1 initially
 	);
 	return bless(\%self,$class);
 }
@@ -121,8 +122,8 @@ sub safetyChecks {
 	foreach my $action (keys %actions) {
 		my $parents=0;
 		my $terminals=0;
-		foreach my $activity (keys %activities) { if($reach{min}{$activity}{$actions{$action}}) { $parents++ } }
-		foreach my $finish   (keys %finishes)   { if($reach{min}{$actions{$action}}{$finish})   { $terminals++ } }
+		foreach my $activity (keys %activities) { if(defined($reach{min}{$activity}{$actions{$action}})) { $parents++ } }
+		foreach my $finish   (keys %finishes)   { if(defined($reach{min}{$actions{$action}}{$finish}))   { $terminals++ } }
 		if($parents==0)    { $orphans{$action}=1 }
 		elsif($parents>1)  { $dualParent{$action}=1 }
 		if($terminals>1)   { $dualFinish{$action}=1 }
@@ -138,21 +139,21 @@ sub safetyChecks {
 }
 
 sub compile {
-	my ($self)=@_;
+	my ($self,%opt)=@_;
 	if($$self{built}) { return }
 	my @errors=$self->validate();
 	if(@errors) { return (error=>\@errors) }
 	%{$$self{built}}=buildConfig(%{$$self{config}});
-	# @errors=$self->safetyChecks();
-	# if(@errors) { return (error=>\@errors) }
+	if(!$opt{unsafe}) { @errors=$self->safetyChecks(); if(@errors) { return (error=>\@errors) } }
 	return;
 }
 
 sub schedule {
 	my ($self,%opt)=@_;
 	delete($$self{attr});
-	my %check=$self->compile(); if($check{error}) { return (error=>$check{error}) }
-	if(!is_arrayref($opt{activities}))            { return (error=>'Activities must be an array') }
+	my %check=$self->compile(unsafe=>$opt{unsafe}//$$self{unsafe});
+	if($check{error})                  { return (error=>$check{error}) }
+	if(!is_arrayref($opt{activities})) { return (error=>'Activities must be an array') }
 	my ($tmoffset,%res)=(0);
 	foreach my $activity (@{$opt{activities}}) {
 		foreach my $entry (scheduler(goal=>$$activity[0],node=>$$self{built}{node}{$$activity[1]},config=>$$self{built},attr=>$self->_attr(),tmoffset=>$tmoffset)) {
