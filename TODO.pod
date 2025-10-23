@@ -82,13 +82,13 @@ An HTML+Javascript solution utilizing Web text to speech already exists to handl
 
 =head2 Additional samples
 
-There are three use cases that cannot currently be provided as examples.
-
 First, something like a music playlist is similar to the base case here.  This is a "large number of random choices" but "each is very fixed in time length".  There are multiple potential actions to be randomized.  Music has attributes (mood).  Scheduling can be arranged in chunks (activities), so there are natural groupings for an arrangement.  Scheduling requires Action limits, above, so currently this is slightly difficult and/or requires a helper import mechanism to build the schedules.  Moreover, the slack/buffer mechanisms operate 'backwards', in the sense that music+pause periods are fixed and may be impossible to schedule within a fixed/given window of time (hence the common patterns of advertisements between songs and fade-in/out techniques).  It's not clear that an arithmetic equivalent of fading will ever be supported in this library.  Nevertheless, a "playlist import" type mechanism to build the configurations would be helpful.
 
 Second, something like holiday activities.  This is a "small number of choices" but "each is very fluid in length" and has C<limit=1>.  An import tool for this type of request should be rather easy, but Action limits are a prerequisite.
 
 Third, scheduling of paired events is not straightforward.  An example would be match-off lineups of N teams (eg fantasy leagues).  That is less a concern of temporal scheduling and more about uniformity in the lineup.  This is possible by running two simultaneous builders on the same configuration, with very fixed times, but may result in self-alignment of activities.  It's not clear that this type of scheduling will ever be supported in this library.
+
+Fourth, this may be useful as a test generation tool.  The C<prove> command already supports shuffling, but for load and performance testing it's often useful to rerun test workloads and workflows in seemingly random order.  This mimics traffic patterns more accurately since similar requests can appear frequently.  Nothing in the existing code mandates the unit of time as "seconds", and message objects can be used to represent sequential tests, or a queue potentially offloaded to a number of parallel workers.
 
 =head1 Functional improvements
 
