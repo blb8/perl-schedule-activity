@@ -79,6 +79,7 @@ sub _reachability { # UNTESTED (directly)
 		foreach my $nodea (keys %{$reach{max}}) {
 		foreach my $nodeb (keys %{$reach{max}{$nodea}}) {
 		foreach my $nodec (keys %{$reach{max}{$nodeb}}) {
+			if($nodea eq $nodec) { $reach{max}{$nodea}{$nodec}='+'; next }
 			my $x=$reach{max}{$nodea}{$nodec};
 			if(defined($x)&&($x eq '+')) { next }
 			my $y=&$triadd($reach{max}{$nodea}{$nodeb},$reach{max}{$nodeb}{$nodec});
