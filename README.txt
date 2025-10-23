@@ -4,6 +4,13 @@ Abstract:
 ---------
 This package provides a mechanism to construct "random" schedules of events using a graph-based configuration of activities and actions.  Action scheduling allows cycles/recursion to meet activity schedule goals.
 
+What's new in version 0.1.7_1:
+--------------------------
+* Testing release, to see if this functions before 5.16.3.
+* Core features are almost all in place, but nothing should require specialized Perl language features.
+* One-time test --- thank you CPAN Testers --- to attempt builds on prior versions.
+
+
 What's new in version 0.1.7:
 --------------------------
 * Schedule::Activity supports an object call interface.
