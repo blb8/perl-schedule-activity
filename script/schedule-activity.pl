@@ -118,5 +118,6 @@ schedule-activity.pl - Build activity schedules.
     --help
 
   The format of the schedule configuration is described in Schedule::Activity.
+  Annotations are not part of the output in this version.
 
 =cut

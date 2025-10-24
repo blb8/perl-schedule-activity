@@ -6,21 +6,13 @@
 
 =over
 
-=item 0.1.7
-
-Introduce the object interface, tension setting for slack and buffer, fixed next[0] handling, fixed/improved non-deterministic tests.
-
-=item 0.1.8
-
-Tension settings that are I<configurable>.  Introduce commandline, compile mode and pre-scheduling safety checks.
-
 =item 0.1.9
 
-C<buildSchedule> should warn about deprecation, TBD...
+C<unsafe=0> will be the default.  C<buildSchedule> will warn about deprecation.
 
 =item 0.2.0
 
-Switch to the object-only interface.
+C<buildSchedule> will be removed; only the object interface will be supported.
 
 =back
 
@@ -58,7 +50,7 @@ The case C<limit=1> is not the primary/initial use case of this scheduler, but s
 
 =head2 Tension configuration
 
-Partially available in 0.1.7.  Scheduling tension is currently only available for buffer time, but it should also be configurable for slack time.  In 0.1.7, tension settings affect path selection, but the scheduler will fail for the fullpath if there is insufficient slack/buffer to adjust the path to the goal time.  This may change in the future, namely the tension settings may permit scheduling completion even if the measured slack/buffer wouldn't otherwise permit adjustment.
+Fully available in 0.1.8.  Scheduling tension supports configurable slack/buffer values.  Tension settings affect path selection, but the scheduler will fail for the fullpath if there is insufficient slack/buffer to adjust the path to the goal time.  This may change in the future, namely the tension settings may permit scheduling completion even if the measured slack/buffer wouldn't otherwise permit adjustment.
 
 =head2 Slack/buffer defaults
 
@@ -71,6 +63,8 @@ Built in 0.1.7.  Off by default in 0.1.8 with C<unsafe=1>, and supported from C<
 =head2 Script-based tooling
 
 Available in 0.1.8, basic C<schedule-activity.pl> script supports Dumper/JSON schedules and activity lists, compiling with/out safety checks.  Future support may provide for common schedule types:  Music playlists (high count, non-redundant nodes), exercise schedules (chunking, some repeats), chores/errands (small action count per activity/category), games (rounds, countdown reminders).
+
+Annotation handling has not been determined.  Options will likely include materialization into the returned message stream, or separate sections.
 
 =head2 Markdown
 

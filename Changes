@@ -1,6 +1,6 @@
 Revision history for Schedule::Activity
 
-0.1.8 - 2025-..-..
+0.1.8 - 2025-10-24
 	- schedule-activity.pl
 	- Tension for slack/buffer can be set during schedule construction
 	- Add support for 'unsafe' flag (enabled by default in this version)
