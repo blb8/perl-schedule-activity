@@ -9,7 +9,7 @@ use Schedule::Activity::Message;
 use Schedule::Activity::Node;
 use Schedule::Activity::NodeFilter;
 
-our $VERSION='0.1.7';
+our $VERSION='0.1.8';
 
 sub new {
 	my ($ref,%opt)=@_;
@@ -432,7 +432,7 @@ Schedule::Activity - Generate random activity schedules
 
 =head1 VERSION
 
-Version 0.1.7
+Version 0.1.8
 
 =head1 SYNOPSIS
 
@@ -690,7 +690,7 @@ The reported C<xy> is an array of values of the form C<(tm, value)>, with each r
 
 For integers, attributes may be fixed in the log at their current value by calling C<incr=0>.  There is currently no similar mechanism for booleans.
 
-(Approaching a decision):  As of version 0.1.1, attribute logging will also occur at the end of every activity, so changes in attributes across activity boundaries do not affect the average value calculation.  In particular, the starting value in any given activity is the most recent value in the previous activity, adjusted by any operator in the activity node itself.  For example, suppose two activities go from C<tm=0> to 10, and from C<tm=10> to 20.  If an attribute is set to C<tm=0, value=5> and not set again until C<tm=15, value=0>, then the average in the first activity is five.
+(Approaching a decision):  Attribute logging will also occur at the end of every activity, so changes in attributes across activity boundaries do not affect the average value calculation.  In particular, the starting value in any given activity is the most recent value in the previous activity, adjusted by any operator in the activity node itself.  For example, suppose two activities go from C<tm=0> to 10, and from C<tm=10> to 20.  If an attribute is set to C<tm=0, value=5> and not set again until C<tm=15, value=0>, then the average in the first activity is five.
 
 Proposed:  Because C<incr=0> can fix the value of an integer attribute in the final action node of an activity, this permits the user to choose the behavior.  For Boolean attributes, they are already fixed until the next C<set> event, so the average value should be equivalent whether these are pinned at the end of the activity or not.
 
