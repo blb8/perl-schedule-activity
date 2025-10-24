@@ -43,6 +43,8 @@ my %opt=(
 	help      =>0,
 	activity  =>[],
 	activities=>undef,
+	tslack    =>undef,
+	tbuffer   =>undef,
 );
 
 GetOptions(
@@ -52,6 +54,8 @@ GetOptions(
 	'unsafe!'     =>\$opt{unsafe},
 	'activity=s'  =>\@{$opt{activity}},
 	'activities=s'=>\$opt{activities},
+	'tslack=f'    =>\$opt{tslack},
+	'tbuffer=f'   =>\$opt{tbuffer},
 	'help'        =>\$opt{help},
 );
 if($opt{help}) { pod2usage(-verbose=>2,-exitval=>2) }
@@ -72,7 +76,7 @@ if($opt{activities}) { foreach my $pair (split(/;/,$opt{activities})) { push @{$
 if(!@{$opt{activity}}) { die 'Activities are required' }
 for(my $i=0;$i<=$#{$opt{activity}};$i++) { $opt{activity}[$i]=[split(/,/,$opt{activity}[$i],2)] }
 
-my %schedule=$scheduler->schedule(activities=>$opt{activity});
+my %schedule=$scheduler->schedule(activities=>$opt{activity},tensionslack=>$opt{tslack},tensionbuffer=>$opt{tbuffer});
 if($schedule{error}) { print STDERR join("\n",@{$schedule{error}}),"\n"; exit(1) }
 
 my @materialized;
@@ -107,8 +111,10 @@ schedule-activity.pl - Build activity schedules.
     activities:     [--activity=time,name ... | --activities='time,name;time,name;...']
 
   options:
-    --check=0/1:   compile the schedule and report any errors
-    --unsafe=0/1:  skip safety checks (cycles, non-termination, etc.)
+    --check=0/1:      compile the schedule and report any errors
+    --unsafe=0/1:     skip safety checks (cycles, non-termination, etc.)
+    --tslack=[0,1]:   slack tension from 0.0 to 1.0
+    --tbuffer=[0,1]:  buffer tension from 0.0 to 1.0
     --help
 
   The format of the schedule configuration is described in Schedule::Activity.

@@ -531,7 +531,7 @@ The slack is the amount of time that could be reduced in an action before it wou
 
 Providing any time value will automatically set any missing values at the fixed ratios 3,4,5.  EG, specifying only C<tmmax=40> will set C<tmmin=24> and C<tmavg=32>.  If provided two time values, priority is given to C<tmavg> to set the third.
 
-Future changes may support adjusting these ratios, automatic slack/buffering, univeral slack/buffer ratios, and open-ended/relaxed slack/buffering.
+Scheduling may be controlled with the tension settings described below.  Future changes may support automatic slack/buffering, univeral slack/buffer ratios, and open-ended/relaxed slack/buffering.
 
 =head2 Messages
 
@@ -588,6 +588,24 @@ In addition to validation failures returned through C<error>, the following may 
 The difference between the result time and the goal may cause retries when an excess exceeds the available slack, or when a shortage exceeds the available buffer.
 
 Caution:  While startup/conclusion of activities may have fixed time specifications, at this time it is recommended that actions always contain some slack/buffer.  There is currently no "relaxing mechanism" during scheduling, so a configured with no slack nor buffer must exactly meet the goal time requested.
+
+=head1 SCHEDULING TENSION
+
+Schedule construction proceeds toward the goal time incrementally, with each action appending its C<tmavg> until the goal is reached.  If the accumulated average times were exactly equal to the goal for the activity, schedules would be unambiguous.  For repeating, recursive scheduling, however, it's necessary to consider scenarios where the actions don't quite reach the goal or where they extend beyond the goal.
+
+=head2 Buffer
+
+The primary method to handle differences between the scheduled time and goal time is the C<buffer>.  As defined above, each activity with C<tmmaxE<gt>tmavg> contributes to the total buffer in the schedule.  The amount of buffer used to select the next activity is controlled by including C<schedule(tensionbuffer=>value)>.  In the 'laziest' mode, C<tensionbuffer=0.0>, all available buffer contributes toward achieving the goal, meaning that scheduling will attempt to reach the final activity node sooner, and schedules will effectively contain a smaller number of activities, each stretched toward C<tmmax>.  In the most aggressive mode, C<tensionbuffer=1.0>, the goal time must be met (or exceeded) before aggressively seeking the final activity node, so schedules will contain a larger number of activities, each compressed toward C<tmmin>.  The default is 0.5.
+
+=head2 Slack
+
+The second method to handle differences is the C<slack>, which can be controlled with C<schedule(tensionslack=>value)>.  With C<tensionslack=0.0>, all accumulated slack will be used to schedule activities beyond the goal time, so schedules will effectively contain a larger number of activities compressed toward C<tmmin>.  With C<tensionslack=1.0>, scheduling will seek the final activity node as soon as the schedule time exceeds the goal, resulting in a smaller number of activities.  The default is 0.5.
+
+Note that the slack tension is secondary to the buffer tension.  With the default values, on average, it's more likely that the buffer will be used to reach the goal.  That is, the number of actions is not uniformly distributed around the C<goal/tmavg> count, but biased toward the lower side.
+
+=head2 Example
+
+Suppose a single repeatable action with C<tmavg=10> is used to construct a schedule with C<goal=99>.  The expected action count is 10 when C<tensionbuffer=1.0> and C<tensionslack=1.0>.  If C<tensionbuffer> is closer to 0.0, the expected number of actions is smaller than 10, perhaps even as low as 1 based on C<tmmax>, because the scheduler determines that more of the buffer can be used to stretch the actions toward the goal of 99.  If, on the other hand, C<tensionslack> is closer to 0.0, the expected number of actions is greater than 10, perhaps even as high as 19 based on C<tmmin>, because the scheduler attempts to insert more non-final actions that can be compressed toward the goal.
 
 =head1 ATTRIBUTES
 
