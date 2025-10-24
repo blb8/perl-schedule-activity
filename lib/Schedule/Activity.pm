@@ -157,7 +157,7 @@ sub schedule {
 	if(!is_arrayref($opt{activities})) { return (error=>'Activities must be an array') }
 	my ($tmoffset,%res)=(0);
 	foreach my $activity (@{$opt{activities}}) {
-		foreach my $entry (scheduler(goal=>$$activity[0],node=>$$self{built}{node}{$$activity[1]},config=>$$self{built},attr=>$self->_attr(),tmoffset=>$tmoffset)) {
+		foreach my $entry (scheduler(goal=>$$activity[0],node=>$$self{built}{node}{$$activity[1]},config=>$$self{built},attr=>$self->_attr(),tmoffset=>$tmoffset,tensionslack=>$opt{tensionslack},tensionbuffer=>$opt{tensionbuffer})) {
 			push @{$res{activities}},[$$entry[0]+$tmoffset,@$entry[1..$#$entry]];
 		}
 		$tmoffset+=$$activity[0];

@@ -3,7 +3,7 @@
 use strict;
 use warnings;
 use Schedule::Activity;
-use Test::More tests=>14;
+use Test::More tests=>15;
 
 subtest 'validation'=>sub {
 	plan tests=>2;
@@ -570,6 +570,39 @@ subtest 'Sanity checks'=>sub {
 	like($errors[4],qr/Dangling action/,                'Dangling node');
 	like($errors[5],qr/Dangling action/,                'Dangling node');
 	like($errors[6],qr/No progress/,                    'tmavg=0');
+};
+
+subtest 'tension control'=>sub {
+	plan tests=>5;
+	my %schedule;
+	my $scheduler=Schedule::Activity->new(
+		configuration=>{
+			node=>{
+				root=>{next=>['A'],tmavg=>0,finish=>'finish'},
+				A=>{tmmin=>5,tmavg=>10,tmmax=>100,next=>['A','finish']},
+				finish=>{tmavg=>0},
+			},
+		});
+	# Expectations:
+	# with tension=1.0/1.0, exactly 12=10+2 actions always
+	# tensionbuffer~0 expect 3--12=[1,10]+2 actions
+	# tensionslack~0  expect 12--21=[10,19]+2 actions
+	my @tests=(
+		# slack, buffer, goal, label, validator, negate, test count (0=default)
+		[1.0,1.0,99,'=12',sub { return $_[0]!=12},1,500],
+		[0.0,1.0,99,'>14',sub { return $_[0]>14 },0,  0],
+		[1.0,0.0,99,'<10',sub { return $_[0]<10 },0,  0],
+		[0.5,0.8,99,'>13',sub { return $_[0]>13 },0,4e3],
+		[0.5,0.5,99,'<9', sub { return $_[0]<9  },0,  0],
+	);
+	foreach my $test (@tests) {
+		my ($limit,$pass)=($$test[6]||1000,$$test[5]);
+		while($limit>0) { $limit--;
+			%schedule=$scheduler->schedule(tensionslack=>$$test[0],tensionbuffer=>$$test[1],activities=>[[$$test[2],'root']]);
+			if(&{$$test[4]}(1+$#{$schedule{activities}})) { $pass=1-$$test[5]; $limit=0 }
+		}
+		ok($pass,"(non-deterministic) Slack $$test[0], Buffer $$test[1], Goal $$test[2], count$$test[3]");
+	}
 };
 
 subtest 'Markdown loading'=>sub {
