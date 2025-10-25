@@ -26,11 +26,11 @@ No additional features planned.  Messages can be strings, arrays, a hash of alte
 
 =head2 Attributes
 
-Planned improvements include helpers to merge annotation attributes into schedules, additional reporting functions, and automatic mapping of attributes for some action node parameters (eg limits).  As of 0.1.2, attributes are fully supported in messages and action nodes.  As of 0.1.3, precedence has been established for node/message attribute overlap.  As of 0.1.5, average values have moved to a rolling algorithm to improve efficiency, which means that no historic/past entry of a value is possible.
+Planned improvements include helpers to merge annotation attributes into schedules, additional reporting functions, and automatic mapping of attributes for some action node parameters (eg limits).  As of 0.1.9, attributes may be "fixed" at activity boundaries but that is no longer done automatically.
 
 =head2 Annotations
 
-Planned improvements include helpers to merge annotation attributes into schedules.  Proposed is annotation configuration per-node (with a keyname, possibly duplicated in the upper-level configuration).  As of 0.1.2, annotation groups are fully supported.
+Planned improvements include helpers to merge annotation attributes into schedules.  This also requires options to control the order/materialization of annotation generation.  Proposed is annotation configuration per-node (with a keyname, possibly duplicated in the upper-level configuration).
 
 =head2 Node filtering
 

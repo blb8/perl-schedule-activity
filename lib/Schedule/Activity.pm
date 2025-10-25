@@ -161,8 +161,8 @@ sub schedule {
 			push @{$res{activities}},[$$entry[0]+$tmoffset,@$entry[1..$#$entry]];
 		}
 		$tmoffset+=$$activity[0];
-		$self->_attr()->log($tmoffset); # potentially overwritten by subsequent nodes
 	}
+	$self->_attr()->log($tmoffset);
 	%{$res{attributes}}=$self->_attr()->report();
 	while(my ($group,$notes)=each %{$$self{config}{annotations}}) {
 		my @schedule;
@@ -654,7 +654,7 @@ The response from C<schedule> includes an C<attributes> section as:
     ...
   }
 
-The C<y> value is the final value at the conclusion of the final activity in the schedule.  The C<xy> contains an array of all values and the times at which they changed; see Logging.  The C<avg> is roughly the time-weighted average of the value, but this depends on the attribute type.
+The C<y> value is the last recorded value in the schedule.  The C<xy> contains an array of all values and the times at which they changed; see Logging.  The C<avg> is roughly the time-weighted average of the value, but this depends on the attribute type.
 
 If an activity containing a unique attribute is not used during construction, the attribute will still be included in the response with its default and initial value.
 
@@ -662,9 +662,9 @@ If an activity containing a unique attribute is not used during construction, th
 
 The C<int> type is the default for attributes.  If initialized in C<%configuration>, it may specify the type, or the value, or both.  The default value is zero, but this may be overwritten if the first activity node specifically calls C<set>.
 
-Integer attributes within activity/actions support all of:  C<set>, C<incr>, C<decr>.  There is no current restriction on values; they may be integers or real numbers, positive or negative.
+Integer attributes within activity/actions support all of:  C<set>, C<incr>, C<decr>.  There is no actual restriction on type so any Perl L<number> is valid, integers or real numbers, positive or negative.
 
-The reported C<avg> is the overall time-weighted average of the values, computed via a trapezoid rule.  That is, if C<tm=0, value=2> and C<tm=10, value=12>, the average is 7 with a weight of 10.  See Logging for more details about averages over activity boundaries.
+The reported C<avg> is the overall time-weighted average of the values, computed via a trapezoid rule.  That is, if C<tm=0, value=2> and C<tm=10, value=12>, the average is 7 with a weight of 10.  See Logging for more details.
 
 =head2 Boolean attributes
 
@@ -688,12 +688,9 @@ When an activity/action node and a selected message both contain attributes, the
 
 The reported C<xy> is an array of values of the form C<(tm, value)>, with each representing an activity/action referencing that attribute built into the schedule.  Each attribute will have its initial value of C<(0, value)>, either the default or the value specified in C<configuration{attributes}>.
 
-For integers, attributes may be fixed in the log at their current value by calling C<incr=0>.  There is currently no similar mechanism for booleans.
+Any attribute may be "fixed" in the log at their current value with the configuration C<name=E<gt>{}>, which is equivalent to C<incr=0> for integers.
 
-(Approaching a decision):  Attribute logging will also occur at the end of every activity, so changes in attributes across activity boundaries do not affect the average value calculation.  In particular, the starting value in any given activity is the most recent value in the previous activity, adjusted by any operator in the activity node itself.  For example, suppose two activities go from C<tm=0> to 10, and from C<tm=10> to 20.  If an attribute is set to C<tm=0, value=5> and not set again until C<tm=15, value=0>, then the average in the first activity is five.
-
-Proposed:  Because C<incr=0> can fix the value of an integer attribute in the final action node of an activity, this permits the user to choose the behavior.  For Boolean attributes, they are already fixed until the next C<set> event, so the average value should be equivalent whether these are pinned at the end of the activity or not.
-
+Attribute logging always occurs at the beginning and end of the completed schedule, so that all scheduled time affects the weighted average value calculation.  Activities may reset or fix attributes in their beginning or final node; the final node is only the "end of the activity" when C<tmavg=0>.
 
 =head1 ANNOTATIONS
 

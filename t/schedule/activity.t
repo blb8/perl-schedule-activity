@@ -198,6 +198,7 @@ subtest 'Attributes'=>sub {
 		},
 		'finish'=>{
 			tmavg=>5,
+			next=>['finish'],
 			attributes=>{
 				counter=>{incr=>1},
 			},
@@ -265,7 +266,7 @@ subtest 'Message attributes'=>sub {
 				message=>{alternates=>[{message=>'Activity',attributes=>{messages=>{incr=>1}}}]},
 				next=>['action 1'],
 				tmmin=>5,tmavg=>5,tmmax=>5,
-				finish=>'Activity, conclude',
+				finish=>'finish',
 				attributes=>{activity=>{incr=>1}},
 			},
 			'action 1'=>{
@@ -283,7 +284,12 @@ subtest 'Message attributes'=>sub {
 			'Activity, conclude'=>{
 				message=>{alternates=>[{message=>'Activity',attributes=>{messages=>{incr=>1}}}]},
 				tmmin=>5,tmavg=>5,tmmax=>5,
+				next=>['finish'],
 				attributes=>{activity=>{incr=>1}},
+			},
+			'finish'=>{
+				tmmin=>0,tmavg=>0,tmmax=>0,
+				attributes=>{activity=>{},action=>{},messages=>{}},
 			},
 		},
 		attributes=>{
