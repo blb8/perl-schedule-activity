@@ -82,6 +82,15 @@ sub average {
 	return $$self{avg};
 }
 
+sub reset {
+	my ($self)=@_;
+	foreach my $tm (sort {$a<=>$b} keys %{$$self{log}}) { $$self{tmmax}=$tm; $$self{value}=$$self{log}{$tm}; last }
+	%{$$self{log}}=();
+	$$self{avg}=undef;
+	$$self{tmsum}=undef;
+	return $self;
+}
+
 sub dump {
 	my ($self)=@_;
 	my %res=(

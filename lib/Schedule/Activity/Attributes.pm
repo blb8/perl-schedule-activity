@@ -54,6 +54,12 @@ sub report {
 	return %res;
 }
 
+sub reset {
+	my ($self)=@_;
+	foreach my $attr (values %{$$self{attr}}) { $attr->reset() }
+	return $self;
+}
+
 sub push {
 	my ($self)=@_;
 	my %state;
