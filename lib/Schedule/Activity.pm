@@ -156,9 +156,11 @@ sub schedule {
 	if($check{error})                  { return (error=>$check{error}) }
 	if(!is_arrayref($opt{activities})) { return (error=>'Activities must be an array') }
 	my ($tmoffset,%res)=(0);
+	$res{stat}{slack}=$res{stat}{buffer}=0;
 	foreach my $activity (@{$opt{activities}}) {
 		foreach my $entry (scheduler(goal=>$$activity[0],node=>$$self{built}{node}{$$activity[1]},config=>$$self{built},attr=>$self->_attr(),tmoffset=>$tmoffset,tensionslack=>$opt{tensionslack},tensionbuffer=>$opt{tensionbuffer})) {
 			push @{$res{activities}},[$$entry[0]+$tmoffset,@$entry[1..$#$entry]];
+			$res{stat}{slack}+=$$entry[3]; $res{stat}{buffer}+=$$entry[4];
 		}
 		$tmoffset+=$$activity[0];
 	}
@@ -602,6 +604,10 @@ The primary method to handle differences between the scheduled time and goal tim
 The second method to handle differences is the C<slack>, which can be controlled with C<schedule(tensionslack=>value)>.  With C<tensionslack=0.0>, all accumulated slack will be used to schedule activities beyond the goal time, so schedules will effectively contain a larger number of activities compressed toward C<tmmin>.  With C<tensionslack=1.0>, scheduling will seek the final activity node as soon as the schedule time exceeds the goal, resulting in a smaller number of activities.  The default is 0.5.
 
 Note that the slack tension is secondary to the buffer tension.  With the default values, on average, it's more likely that the buffer will be used to reach the goal.  That is, the number of actions is not uniformly distributed around the C<goal/tmavg> count, but biased toward the lower side.
+
+=head2 Response
+
+The scheduling response contains C<{stat}> that reports the accumulated slack and buffer for all actions.  To find the balance achieved during scheduling, as a percent, compute C<slack/(slack+buffer)>.  0% means all actions were scheduled near C<tmmin>, and 100% means all were scheduled near C<tmmax>.
 
 =head2 Example
 
