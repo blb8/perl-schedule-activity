@@ -2,6 +2,7 @@ Revision history for Schedule::Activity
 
 0.1.9 - 2025-..-..
 	- Attributes are no longer "fixed" at activity boundaries, only at the start/end of schedule.
+	- schedule-activity.pl supports annotations
 
 0.1.8 - 2025-10-24
 	- schedule-activity.pl

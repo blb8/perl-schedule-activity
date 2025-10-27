@@ -42,7 +42,6 @@ sub annotate {
 		beforemax=>$before{max}//$before{min}//1,
 		between  =>$$self{between}//1,
 	);
-	my $p=$$self{p}//1;
 	my @matchidx=grep {rand()<=$opt{p}} grep {$schedule[$_][1]{keyname}=~$$self{nodes}} (0..$#schedule);
 	if(!@matchidx) { return }
 	my @notes;
