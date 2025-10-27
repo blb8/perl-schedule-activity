@@ -377,6 +377,7 @@ sub scheduler {
 
 sub buildSchedule {
 	my (%opt)=@_;
+	print STDERR "buildSchedule will be deprecated in 0.2.0\n";
 	return __PACKAGE__->new(configuration=>$opt{configuration})->schedule(activities=>$opt{activities});
 }
 
