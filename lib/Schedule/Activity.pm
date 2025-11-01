@@ -20,7 +20,7 @@ sub new {
 		valid   =>0,
 		built   =>undef,
 		reach   =>undef,
-		unsafe  =>$opt{unsafe}//1, # default to 1 initially
+		unsafe  =>$opt{unsafe}//0,
 	);
 	return bless(\%self,$class);
 }
