@@ -9,7 +9,7 @@ use Schedule::Activity::Message;
 use Schedule::Activity::Node;
 use Schedule::Activity::NodeFilter;
 
-our $VERSION='0.1.8';
+our $VERSION='0.1.9';
 
 sub new {
 	my ($ref,%opt)=@_;
@@ -439,7 +439,7 @@ Schedule::Activity - Generate random activity schedules
 
 =head1 VERSION
 
-Version 0.1.8
+Version 0.1.9
 
 =head1 SYNOPSIS
 
@@ -616,7 +616,7 @@ Schedule construction proceeds toward the goal time incrementally, with each act
 
 Each activity node and action has buffer and slack, as defined above, that contributes to the accumulated total buffer and slack.  The amount of buffer/slack that contributes to the random current time is controlled by including C<schedule(tensionbuffer=E<gt>value)> and C<tensionslack=E<gt>value>, each between 0 and 1.  Tension effectively controls how little of each contributes toward randomization around the goal.
 
-In the 'laziest' mode, with C<tension=0.0>, all available buffer/slack is used to establish the random current time, increasing the likelihood that it is greater than the goal.  With a lower buffer tension, for example, scheduling is more likely to reach the final activity node sooner, and thus will contain a smaller number of actions on average, each stretched toward C<tmmax>.  With a higher tension, the goal time must be met (or exceeded) before aggressively seeking the final activity node, so schedules will contain a larger number of actions, each compressed toward C<tmmin>.  
+In the 'laziest' mode, with C<tension=0.0>, all available buffer/slack is used to establish the random current time, increasing the likelihood that it is greater than the goal.  With a lower buffer tension, for example, scheduling is more likely to reach the final activity node sooner, and thus will contain a smaller number of actions on average, each stretched toward C<tmmax>.  With a higher tension, the goal time must be met (or exceeded) before aggressively seeking the final activity node, so schedules will contain a larger number of actions, each compressed toward C<tmmin>.
 
 The tension for slack is similar, with lower values permitting a larger number of actions beyond the goal, each compressed toward C<tmmin>, whereas with tension near 1, scheduling will seek the final activity node as soon as the schedule time exceeds the goal, resulting in a smaller number of activities.
 
