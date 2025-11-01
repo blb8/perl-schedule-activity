@@ -161,6 +161,8 @@ sub schedule {
 		foreach my $entry (scheduler(goal=>$$activity[0],node=>$$self{built}{node}{$$activity[1]},config=>$$self{built},attr=>$self->_attr(),tmoffset=>$tmoffset,tensionslack=>$opt{tensionslack},tensionbuffer=>$opt{tensionbuffer})) {
 			push @{$res{activities}},[$$entry[0]+$tmoffset,@$entry[1..$#$entry]];
 			$res{stat}{slack}+=$$entry[3]; $res{stat}{buffer}+=$$entry[4];
+			$res{stat}{slackttl}+=$$entry[1]{tmavg}-$$entry[1]{tmmin};
+			$res{stat}{bufferttl}+=$$entry[1]{tmmax}-$$entry[1]{tmavg};
 		}
 		$tmoffset+=$$activity[0];
 	}
@@ -278,8 +280,8 @@ sub findpath {
 		push @res,[$tm,$node];
 		push @{$res[-1]},nodeMessage($opt{attr},$tm+$opt{tmoffset},$node);
 		$node->increment(\$tm,\$slack,\$buffer);
-		if($tm+$tension{buffer}*$buffer<$opt{goal})  { $node=$node->nextrandom(not=>$conclusion,tm=>$tm,attr=>$opt{attr}{attr})//$node->nextrandom(tm=>$tm,attr=>$opt{attr}{attr}) }
-		elsif($tm-$tension{slack}*$slack<$opt{goal}) { $node=$node->nextrandom(tm=>$tm,attr=>$opt{attr}{attr}) } # tm+buffer>=goal
+		if($tm-$tension{slack}*$slack+rand($tension{buffer}*$buffer+$tension{slack}*$slack)<=$opt{goal}) {
+			$node=$node->nextrandom(not=>$conclusion,tm=>$tm,attr=>$opt{attr}{attr})//$node->nextrandom(tm=>$tm,attr=>$opt{attr}{attr}) }
 		elsif($node->hasnext($conclusion)) { $node=$conclusion }
 		else { $node=$node->nextrandom(not=>$conclusion,tm=>$tm,attr=>$opt{attr}{attr})//$node->nextrandom(tm=>$tm,attr=>$opt{attr}{attr}) }
 	}
@@ -347,8 +349,10 @@ sub scheduler {
 		my $dt;
 		if($i<$#res) { $dt=$res[$i+1][0]-$res[$i][0] }
 		else         { $dt=$opt{goal}-$res[$i][0] }
-		$res[$i][3]=$dt-($res[$i][1]{tmmin}//0);
-		$res[$i][4]=($res[$i][1]{tmmax}//0)-$dt;
+		$res[$i][3]=$res[$i][4]=0;
+		$dt-=$res[$i][1]{tmavg}//0;
+		if($dt>0) { $res[$i][4]=$dt }
+		else      { $res[$i][3]=-$dt }
 	}
 	#
 	# Full materialization of messages and attributes occurs after all
