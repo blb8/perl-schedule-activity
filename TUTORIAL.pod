@@ -13,7 +13,7 @@ Many have a fairly consistent eight hour workday, plus some commuting time.  Wit
   Reading:    Relaxing/entertaining reading.
   Sleep:      Preparation, going to sleep.
 
-Each of these has a natural set of steps that affect our focus, attention, energy, and productivity.  Some many benefit from music, others from optimistic messages, and others from routine/helpful reminders.  In a given evening, we may want to be somewhat random with our activities, or have specific goals in mind.  For many of our tasks, they won't all fit in a given evening and we must choose wisely.  For the sake of demonstration, all of these will be configured and scheduled.
+Each of these has a natural set of steps that affect our focus, attention, energy, and productivity.  Some many benefit from music, others from optimistic messages, and others from routine/helpful reminders.  In a given evening, we may want to be somewhat random with our activities, or have specific goals in mind.  For many of our tasks, they won't all fit in a given evening and we must choose wisely.  For the sake of demonstration, some of these will be configured and scheduled.
 
 =head2 Initial Example
 
@@ -87,6 +87,53 @@ In this case, the activities are clear:  Each of Chores, Exercise, Food, will be
   0:47:00 Cleanup
   0:49:30                           Change music, off
   0:50:00 (Finish exercise)
+
+=head2 Repeating Tasks
+
+As seen in the sample, some tasks (actions) repeat.  As an example, there is always "paperwork/mail to reorganize" as a small chore, or "clean one room" as a large chore.  Likewise exercise might be broken down into actual repeat sets, eg "curls", or just be a broad category, eg "arms".  Your schedule will vary based on your needs!  As seen below, however, the scehduler expects to revisit some of the tasks, though some are unique and occur only once.
+
+=head2 Chores
+
+Chores are organized like this (some labels are abbreviated):
+
+           Chores
+          /     \
+         /       \
+        v         v
+      large1    large2
+          \      /
+           v    v
+       Chores, small <-
+     /  ^    |  ^   \  \
+    /  /     |  |    \  \
+   v  /      v  |     v  \
+  small1    small2    small3
+       \      |      /
+        v     v     v
+       Chores, finish
+
+In your personal evening schedule, some of the small may not repeat, and there are ways to configure that with node filters, not demonstrated below.
+
+=head2 Exercise
+
+Exercise is organized like this (some labels are abbreviated):
+
+              Exercise
+                 |
+                 v
+          Exercise, setup
+                 |
+                 v
+     -----Exercise, sets<---------
+    /    ^ |  ^     ^  |\    \    \
+    |   /  |  |     |  | \    \    \
+    v  /   v  |     |  v  \    \    |
+thing1-   thing2   thing3  ->thing4 |
+       \  |          |   \  /     | |
+        \ |          |    v       | |
+         \|          |    break >-+-/
+          v          v           /
+          Exercise, finish<------
 
 =head2 Activities and Actions
 
