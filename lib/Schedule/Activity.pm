@@ -240,6 +240,7 @@ sub validateConfig {
 			if(!is_hashref($$node{attributes})) { push @nerrors,"attributes, Invalid structure" }
 			else { while(my ($k,$v)=each %{$$node{attributes}}) { push @nerrors,$attr->register($k,%$v) } }
 		}
+		push @nerrors,Schedule::Activity::Message::validate($$node{message},names=>$config{messages});
 		foreach my $kv (Schedule::Activity::Message::attributesFromConf($$node{message})) { push @nerrors,$attr->register($$kv[0],%{$$kv[1]}) }
 		if(@nerrors) { push @errors,map {"Node $k, $_"} @nerrors; next }
 		@invalids=grep {!defined($config{node}{$_})} @{$$node{next}//[]};
@@ -249,7 +250,10 @@ sub validateConfig {
 	$config{annotations}//={};
 	if(!is_hashref($config{annotations})) { push @errors,'Annotations must be a hash' }
 	else { while(my ($k,$notes)=each %{$config{annotations}}) {
-		push @errors,map {"Annotation $k:  $_"} map {Schedule::Activity::Annotation::validate(%$_)} @$notes } }
+		push @errors,map {"Annotation $k:  $_"} map {
+			Schedule::Activity::Annotation::validate(%$_),
+			Schedule::Activity::Message::validate($$_{message},names=>$config{messages})
+			} @$notes } }
 	return @errors;
 }
 
@@ -558,7 +562,7 @@ Each activity/action node may contain an optional message.  Messages are provide
     ]
   }
 
-Message selection is randomized for arrays and a hash of alternates.  Any attributes are emitted with the attribute response values, described below.
+Message selection is randomized for arrays and a hash of alternates.  Named messages must exist (see L</"NAMED MESSAGES"> below).  Any attributes are emitted with the attribute response values, described below.
 
 =head1 RESPONSE
 

@@ -63,6 +63,21 @@ sub attributesFromConf {
 	return @res;
 }
 
+sub validate {
+	my ($msg,%opt)=@_;
+	if(!is_ref($msg)) { return }
+	if(is_arrayref($msg)) { return map {validate($_,%opt)} grep {is_hashref($_)} @$msg }
+	my @res;
+	if(is_hashref($msg)) {
+		if(exists($$msg{name})) {
+			if(!defined($$msg{name}))                 { push @res,'Message undefined name' }
+			elsif(!defined($opt{names}{$$msg{name}})) { push @res,"Message undefined name:  $$msg{name}" }
+		}
+		if(is_arrayref($$msg{alternates})) { push @res,map {validate($_,%opt)} @{$$msg{alternates}} }
+	}
+	return @res;
+}
+
 1;
 
 __END__
