@@ -367,7 +367,7 @@ sub schedule {
 	$self->_attr()->log($tmoffset);
 	if($opt{after}) { unshift @{$res{activities}},@{$opt{after}{activities}} }
 	%{$res{attributes}}=$self->_attr()->report();
-	while(my ($group,$notes)=each %{$$self{config}{annotations}}) {
+	if(!$opt{nonote}) { while(my ($group,$notes)=each %{$$self{config}{annotations}}) {
 		my @schedule;
 		foreach my $note (@$notes) {
 			my $annotation=Schedule::Activity::Annotation->new(%$note);
@@ -383,8 +383,8 @@ sub schedule {
 			if($schedule[$i+1][0]==$schedule[$i][0]) {
 				splice(@schedule,$i+1,1); $i-- } }
 		$res{annotations}{$group}{events}=\@schedule;
-	}
-	$self->_attr()->push(); $res{_attr}=pop(@{$$self{attr}{stack}}); # hacking
+	} }
+	$self->_attr()->push(); $res{_attr}=pop(@{$$self{attr}{stack}}); # store a copy in {_attr}
 	$self->_attr()->pop();
 	$res{_tmmax}=$tmoffset;
 	return %res;
@@ -808,6 +808,29 @@ Any list identification markers may be used interchangably (number plus period, 
 The imported configuration permits an activity to be followed by any of its actions, and any action can be followed by any other action within the activity (but not itself).  Any action can terminate the activity.
 
 The full settings needed to build a schedule can be loaded with C<%settings=loadMarkdown(text)>, and both C<$settings{configuration}> and C<$settings{activities}> will be defined so an immediate call to C<schedule(%settings)> can be made.
+
+=head1 INCREMENTAL CONSTRUCTION
+
+For longer schedules with multiple activities, regenerating a full schedule because of issues with a single activity can be time consuming.  A more interactive approach would be to build and verify the first activity, then review choices for the second activity schedule, append it, and continue.  After full scheduling construction, annotations can be built.
+
+Incremental schedules can be built using the C<after> and C<nonote> options:
+
+  # Use nonote to avoid annotation build at this time
+  my $choiceA=$scheduler->schedule(nonote=>1, activities=>[[600,'activity1']);
+  my $choiceB=$scheduler->schedule(nonote=>1, activities=>[[600,'activity1']);
+  #
+  # two or more choices are reviewed and one is selected
+  my %res=$scheduler->schedule(after=>$choiceB, activities=>[[600,'activity2']);
+
+The schedule indicated via C<after> signals that the scheduler should build the activities and extend the schedule.  Attributes are automatically loaded from the earlier part of the schedule and affect node filtering normally.
+
+Annotations, which may apply to any node by name, are dropped when the schedule is extended.  This is because a single annotation may have a limit and match nodes across activities, so full regeneration is necessary.  To make generation more efficient, C<nonote> may be set to skip annotation generation in earlier steps.
+
+The final result above does generate annotations, but it's also possible to pass C<nonote> at each step and then generate annotations without adding activities by calling:
+
+  my %res=$scheduler->schedule(after=>$earlierSchedule, activities=>[]);
+
+This functionality is experimental starting with Version 0.2.1.
 
 =head1 BUGS
 
