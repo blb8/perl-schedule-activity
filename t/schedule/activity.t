@@ -39,26 +39,18 @@ subtest 'Incremental build'=>sub {
 	@choices=grep {$_ && !$$_{error}} @choices;
 	$choice=$choices[int(rand(1+$#choices))];
 	%res=$scheduler->schedule(after=>$choice,activities=>[[18,'activity']]);
-
-# average
-# (5*1.5+5*2.5+5*3.5+6*4.5+6*5.5+6*6)/33
-# 4.04545454545454545454
-
-	foreach my $activity (grep {$$_[1]{keyname} eq 'node1b'} @{$res{activities}},@{$fullres{activities}}) {
-		$$activity[1]{keyname}='node1a';
-	}
-
+	#
+	# fake the names for comparison
+	foreach my $activity (grep {$$_[1]{keyname} eq 'node1b'} @{$res{activities}},@{$fullres{activities}}) { $$activity[1]{keyname}='node1a' }
+	#
 	is_deeply($res{_attr},$fullres{_attr},'_attr');
 	is_deeply($res{attributes},$fullres{attributes},'attributes');
 	is_deeply($res{activities},$fullres{activities},'activities');
 	is_deeply($res{stat},$fullres{stat},'stat');
 	is_deeply(\%res,\%fullres,'Two activities');
 
-	ok(0,'Annotations need configured and checked');
-
-	...;
-
 	# todo:  merge the {after}{annotations} on the front of each group (this is an issue since annotations are schedule-wide)
+	ok(0,'Annotations need configured and checked');
 
 };
 ...;
