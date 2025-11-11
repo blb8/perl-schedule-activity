@@ -7,52 +7,59 @@ use Test::More tests=>16;
 
 if(1) {
 subtest 'Incremental build'=>sub {
-	my ($scheduler,@choices,%res);
-	$scheduler=Schedule::Activity->new(
-		configuration=>{node=>{
-			'activity'=>{
-				next=>['node1a','node1b'],
-				tmavg=>5,
-				finish=>'finish',
-				attributes=>{counter=>{incr=>+1}},
-			},
-			'node1a'=>{
-				next=>['finish'],
-				tmavg=>5,
-				attributes=>{counter=>{incr=>+1}},
-			},
-			'node1b'=>{
-				next=>['finish'],
-				tmavg=>5,
-				attributes=>{counter=>{incr=>+1}},
-			},
-			'finish'=>{
-				tmavg=>5,
-				attributes=>{counter=>{incr=>+1}},
-			},
-		}});
+	my (%config,$scheduler,$fullscheduler,$choice,@choices,%res,%fullres);
+	%config=(node=>{
+		'activity'=>{
+			next=>['node1a','node1b'],
+			tmavg=>5,
+			finish=>'finish',
+			attributes=>{counter=>{incr=>+1}},
+		},
+		'node1a'=>{
+			next=>['finish'],
+			tmavg=>5,
+			attributes=>{counter=>{incr=>+1}},
+		},
+		'node1b'=>{
+			next=>['finish'],
+			tmavg=>5,
+			attributes=>{counter=>{incr=>+1}},
+		},
+		'finish'=>{
+			tmavg=>5,
+			attributes=>{counter=>{incr=>+1}},
+		},
+	});
+	$fullscheduler=Schedule::Activity->new(configuration=>\%config);
+	%fullres=$fullscheduler->schedule(activities=>[[15,'activity'],[18,'activity']]);
 	#
-	#
-	use Data::Dumper;
-	push @choices,{$scheduler->schedule(tmoffset=>0,activities=>[[15,'activity']])};
-	push @choices,{$scheduler->schedule(tmoffset=>0,activities=>[[15,'activity']])};
-	push @choices,{$scheduler->schedule(tmoffset=>0,activities=>[[15,'activity']])};
-	#
-	# now try to force starting with those attributes
-	delete($$scheduler{attr});
-	my $choice=$choices[int(rand(1+$#choices))];
-	%res=$scheduler->schedule(after=>$choice,tmoffset=>15,activities=>[[15,'activity']]);
-	#
-	# todo:  merge the {after}{stat} before the scheduler run (probably)
-	# todo:  merge the {after}{annotations} on the front of each group (this is an issue since annotations are schedule-wide)
-	# todo:  merge the {after}{activities} on the front of the list
-	#
-	print Dumper(\%res);
+	$scheduler=Schedule::Activity->new(configuration=>\%config);
+	@choices=();
+	foreach (1..10) { push @choices,{$scheduler->schedule(activities=>[[15,'activity']])} }
+	@choices=grep {$_ && !$$_{error}} @choices;
+	$choice=$choices[int(rand(1+$#choices))];
+	%res=$scheduler->schedule(after=>$choice,activities=>[[18,'activity']]);
 
-	# This seems to work.  To make this work, then:
-	# 1.  schedule() doesn't delete(attr) but does a push/pop.
-	# 2.  Result needs to include raw _attr->dump(), as well as the final time.
-	# 3.  The chosen result schedule must be reloaded into the _attr() before the next activity.
+# average
+# (5*1.5+5*2.5+5*3.5+6*4.5+6*5.5+6*6)/33
+# 4.04545454545454545454
+
+	foreach my $activity (grep {$$_[1]{keyname} eq 'node1b'} @{$res{activities}},@{$fullres{activities}}) {
+		$$activity[1]{keyname}='node1a';
+	}
+
+	is_deeply($res{_attr},$fullres{_attr},'_attr');
+	is_deeply($res{attributes},$fullres{attributes},'attributes');
+	is_deeply($res{activities},$fullres{activities},'activities');
+	is_deeply($res{stat},$fullres{stat},'stat');
+	is_deeply(\%res,\%fullres,'Two activities');
+
+	ok(0,'Annotations need configured and checked');
+
+	...;
+
+	# todo:  merge the {after}{annotations} on the front of each group (this is an issue since annotations are schedule-wide)
+
 };
 ...;
 }
