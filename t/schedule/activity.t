@@ -3,76 +3,7 @@
 use strict;
 use warnings;
 use Schedule::Activity;
-use Test::More tests=>16;
-
-if(1) {
-subtest 'Incremental build'=>sub {
-	plan tests=>6;
-	my (%config,$scheduler,$fullscheduler,$choice,@choices,%res,%fullres);
-	%config=(node=>{
-		'activity'=>{
-			next=>['node1a','node1b'],
-			tmavg=>5,
-			finish=>'finish',
-			attributes=>{counter=>{incr=>+1}},
-		},
-		'node1a'=>{
-			next=>['finish'],
-			tmavg=>5,
-			attributes=>{counter=>{incr=>+1}},
-		},
-		'node1b'=>{
-			next=>['finish'],
-			tmavg=>5,
-			attributes=>{counter=>{incr=>+1}},
-		},
-		'finish'=>{
-			tmavg=>5,
-			attributes=>{counter=>{incr=>+1}},
-		},
-	},
-	annotations=>{
-		general=>[
-			{
-				nodes=>qr/node1[ab]/,
-				message=>'note',
-				before=>{min=>-2,max=>-2},
-				p=>1.0,
-				limit=>1,
-			},
-		],
-	});
-	$fullscheduler=Schedule::Activity->new(configuration=>\%config);
-	%fullres=$fullscheduler->schedule(activities=>[[15,'activity'],[18,'activity']]);
-	#
-	$scheduler=Schedule::Activity->new(configuration=>\%config);
-	#
-	# choose the first activity schedule
-	@choices=();
-	foreach (1..10) { push @choices,{$scheduler->schedule(nonote=>1,activities=>[[15,'activity']])} }
-	@choices=grep {$_ && !$$_{error}} @choices;
-	$choice=$choices[int(rand(1+$#choices))];
-	#
-	# and the second activity extends the first
-	%res=$scheduler->schedule(nonote=>1,after=>$choice,activities=>[[18,'activity']]);
-	#
-	# separately construct annotations
-	$choice={%res};
-	%res=$scheduler->schedule(after=>$choice,activities=>[]);
-	$res{annotations}{general}{events}[0][0]=$fullres{annotations}{general}{events}[0][0]; # actual timestamp doesn't matter
-	#
-	# fake the names for comparison
-	foreach my $activity (grep {$$_[1]{keyname} eq 'node1b'} @{$res{activities}},@{$fullres{activities}}) { $$activity[1]{keyname}='node1a' }
-	#
-	is_deeply($res{activities},$fullres{activities},'activities');
-	is_deeply($res{attributes},$fullres{attributes},'attributes');
-	is_deeply($res{annotations},$fullres{annotations},'annotations');
-	is_deeply($res{stat},$fullres{stat},'stat');
-	is_deeply($res{_attr},$fullres{_attr},'_attr');
-	is_deeply(\%res,\%fullres,'Two activities');
-};
-...;
-}
+use Test::More tests=>17;
 
 subtest 'validation'=>sub {
 	plan tests=>2;
@@ -777,3 +708,70 @@ subtest 'Markdown loading'=>sub {
 	}
 };
 
+subtest 'Incremental build'=>sub {
+	plan tests=>6;
+	my (%config,$scheduler,$fullscheduler,$choice,@choices,%res,%fullres);
+	%config=(node=>{
+		'activity'=>{
+			next=>['node1a','node1b'],
+			tmavg=>5,
+			finish=>'finish',
+			attributes=>{counter=>{incr=>+1}},
+		},
+		'node1a'=>{
+			next=>['finish'],
+			tmavg=>5,
+			attributes=>{counter=>{incr=>+1}},
+		},
+		'node1b'=>{
+			next=>['finish'],
+			tmavg=>5,
+			attributes=>{counter=>{incr=>+1}},
+		},
+		'finish'=>{
+			tmavg=>5,
+			attributes=>{counter=>{incr=>+1}},
+		},
+	},
+	annotations=>{
+		general=>[
+			{
+				nodes=>qr/node1[ab]/,
+				message=>'note',
+				before=>{min=>-2,max=>-2},
+				p=>1.0,
+				limit=>1,
+			},
+		],
+	});
+	$fullscheduler=Schedule::Activity->new(configuration=>\%config);
+	%fullres=$fullscheduler->schedule(activities=>[[15,'activity'],[18,'activity']]);
+	#
+	$scheduler=Schedule::Activity->new(configuration=>\%config);
+	#
+	# choose the first activity schedule
+	@choices=();
+	foreach (1..10) { push @choices,{$scheduler->schedule(nonote=>1,activities=>[[15,'activity']])} }
+	@choices=grep {$_ && !$$_{error}} @choices;
+	$choice=$choices[int(rand(1+$#choices))];
+	#
+	# and the second activity extends the first
+	%res=$scheduler->schedule(nonote=>1,after=>$choice,activities=>[[18,'activity']]);
+	#
+	# separately construct annotations
+	$choice={%res};
+	%res=$scheduler->schedule(after=>$choice,activities=>[]);
+	$res{annotations}{general}{events}[0][0]=$fullres{annotations}{general}{events}[0][0]; # actual timestamp doesn't matter
+	#
+	# fake the names for comparison
+	foreach my $activity (grep {$$_[1]{keyname} eq 'node1b'} @{$res{activities}},@{$fullres{activities}}) { $$activity[1]{keyname}='node1a' }
+	#
+	is_deeply($res{activities},$fullres{activities},'activities');
+	is_deeply($res{attributes},$fullres{attributes},'attributes');
+	is_deeply($res{annotations},$fullres{annotations},'annotations');
+	is_deeply($res{stat},$fullres{stat},'stat');
+	is_deeply($res{_attr},$fullres{_attr},'_attr');
+	is_deeply(\%res,\%fullres,'Two activities');
+};
+
+ok(0,'Need to work on commandline incremental build');
