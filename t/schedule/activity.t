@@ -5,6 +5,58 @@ use warnings;
 use Schedule::Activity;
 use Test::More tests=>16;
 
+if(1) {
+subtest 'Incremental build'=>sub {
+	my ($scheduler,@choices,%res);
+	$scheduler=Schedule::Activity->new(
+		configuration=>{node=>{
+			'activity'=>{
+				next=>['node1a','node1b'],
+				tmavg=>5,
+				finish=>'finish',
+				attributes=>{counter=>{incr=>+1}},
+			},
+			'node1a'=>{
+				next=>['finish'],
+				tmavg=>5,
+				attributes=>{counter=>{incr=>+1}},
+			},
+			'node1b'=>{
+				next=>['finish'],
+				tmavg=>5,
+				attributes=>{counter=>{incr=>+1}},
+			},
+			'finish'=>{
+				tmavg=>5,
+				attributes=>{counter=>{incr=>+1}},
+			},
+		}});
+	#
+	#
+	use Data::Dumper;
+	push @choices,{$scheduler->schedule(tmoffset=>0,activities=>[[15,'activity']])};
+	push @choices,{$scheduler->schedule(tmoffset=>0,activities=>[[15,'activity']])};
+	push @choices,{$scheduler->schedule(tmoffset=>0,activities=>[[15,'activity']])};
+	#
+	# now try to force starting with those attributes
+	delete($$scheduler{attr});
+	my $choice=$choices[int(rand(1+$#choices))];
+	%res=$scheduler->schedule(after=>$choice,tmoffset=>15,activities=>[[15,'activity']]);
+	#
+	# todo:  merge the {after}{stat} before the scheduler run (probably)
+	# todo:  merge the {after}{annotations} on the front of each group (this is an issue since annotations are schedule-wide)
+	# todo:  merge the {after}{activities} on the front of the list
+	#
+	print Dumper(\%res);
+
+	# This seems to work.  To make this work, then:
+	# 1.  schedule() doesn't delete(attr) but does a push/pop.
+	# 2.  Result needs to include raw _attr->dump(), as well as the final time.
+	# 3.  The chosen result schedule must be reloaded into the _attr() before the next activity.
+};
+...;
+}
+
 subtest 'validation'=>sub {
 	plan tests=>2;
 	my ($scheduler,@errors);

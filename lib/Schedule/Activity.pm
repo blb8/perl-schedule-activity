@@ -339,11 +339,24 @@ sub scheduler {
 
 sub schedule {
 	my ($self,%opt)=@_;
-	delete($$self{attr});
 	my %check=$self->compile(unsafe=>$opt{unsafe}//$$self{unsafe});
+	#
+	#
+	if($opt{after}) {
+		delete($$self{attr});
+		my $attr=$self->_attr();
+		push @{$$attr{stack}},$opt{after}{_attr};
+		$attr->pop();
+	}
+	#
+	$self->_attr()->push();
 	if($check{error})                  { return (error=>$check{error}) }
 	if(!is_arrayref($opt{activities})) { return (error=>'Activities must be an array') }
-	my ($tmoffset,%res)=(0);
+	my ($tmoffset,%res)=($opt{tmoffset}//0);
+	if($opt{after}) {
+		$tmoffset=$opt{after}{_tmmax};
+		# have to merge the stats
+	}
 	$res{stat}{slack}=$res{stat}{buffer}=0;
 	foreach my $activity (@{$opt{activities}}) {
 		foreach my $entry (scheduler(goal=>$$activity[0],node=>$$self{built}{node}{$$activity[1]},config=>$$self{built},attr=>$self->_attr(),tmoffset=>$tmoffset,tensionslack=>$opt{tensionslack},tensionbuffer=>$opt{tensionbuffer})) {
@@ -373,6 +386,9 @@ sub schedule {
 				splice(@schedule,$i+1,1); $i-- } }
 		$res{annotations}{$group}{events}=\@schedule;
 	}
+	$self->_attr()->push(); $res{_attr}=pop(@{$$self{attr}{stack}}); # hacking
+	$self->_attr()->pop();
+	$res{_tmmax}=$tmoffset;
 	return %res;
 }
 
