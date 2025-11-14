@@ -2,9 +2,11 @@
 
 use strict;
 use warnings;
+use Data::Dumper;
 use Getopt::Long;
 use JSON::XS qw/decode_json/;
 use Pod::Usage;
+use Storable qw/dclone/;
 use Schedule::Activity;
 
 sub load {
@@ -26,6 +28,22 @@ sub loadeval {
 	elsif($t=~/^[{]/) { eval "\%res=\%{ $t };"; if($@) { die "$@" } } # }
 	else              { die "$fn does not contain a valid configuration" }
 	return %res;
+}
+
+sub loadafter {
+	my ($fn)=@_;
+	my $t=load($fn);
+	my $previous;
+	eval $t;
+	if($@) { die "Loading after file failed:  $@" }
+	return %$previous;
+}
+
+sub saveafter {
+	my ($fn,$config,$schedule)=@_;
+	open(my $fh,'>',$fn);
+	print $fh Data::Dumper->new([{configuration=>$config,schedule=>$schedule}],['previous'])->Indent(0)->Purity(1)->Dump();
+	close($fh);
 }
 
 sub loadjson {
@@ -65,6 +83,8 @@ my %opt=(
 	noteorder =>undef,
 	tslack    =>undef,
 	tbuffer   =>undef,
+	after     =>undef,
+	save      =>undef,
 );
 
 GetOptions(
@@ -78,14 +98,23 @@ GetOptions(
 	'noteorder=s' =>\$opt{noteorder},
 	'tslack=f'    =>\$opt{tslack},
 	'tbuffer=f'   =>\$opt{tbuffer},
+	'after=s'     =>\$opt{after},
+	'save=s'      =>\$opt{save},
 	'help'        =>\$opt{help},
 );
 if($opt{help}) { pod2usage(-verbose=>1,-exitval=>2) }
 
-my %configuration=
+my (%configuration,%after);
+if($opt{after}) {
+	%after=loadafter($opt{after});
+	%configuration=%{$after{configuration}};
+	%after=(after=>$after{schedule});
+}
+else { %configuration=
 	$opt{schedule} ? loadeval($opt{schedule}) :
 	$opt{json}     ? loadjson($opt{json}) :
 	die 'Configuration is required';
+}
 
 my $scheduler=Schedule::Activity->new(unsafe=>$opt{unsafe},configuration=>\%configuration);
 my %check=$scheduler->compile();
@@ -95,11 +124,17 @@ if($opt{check}) {
 }
 
 if($opt{activities}) { foreach my $pair (split(/;/,$opt{activities})) { push @{$opt{activity}},$pair } }
-if(!@{$opt{activity}}) { die 'Activities are required' }
+if(!@{$opt{activity}}&&!$opt{after}) { die 'Activities are required' }
 for(my $i=0;$i<=$#{$opt{activity}};$i++) { $opt{activity}[$i]=[split(/,/,$opt{activity}[$i],2)] }
 
-my %schedule=$scheduler->schedule(activities=>$opt{activity},tensionslack=>$opt{tslack},tensionbuffer=>$opt{tbuffer});
+my %schedule=$scheduler->schedule(%after,activities=>$opt{activity},tensionslack=>$opt{tslack},tensionbuffer=>$opt{tbuffer});
 if($schedule{error}) { print STDERR join("\n",@{$schedule{error}}),"\n"; exit(1) }
+
+# Workaround.  Until other options are available, annotations canNOT be
+# materialized into the activity schedule.  Such nodes are unexpected
+# during subsequent annotation runs, and will need to be stashed/restored
+# if we want to support saving annotations incrementally.
+if($opt{save}) { $opt{notemerge}=0; saveafter($opt{save},\%configuration,\%schedule) }
 
 if($opt{notemerge}) {
 	my %seen;
