@@ -774,4 +774,3 @@ subtest 'Incremental build'=>sub {
 	is_deeply(\%res,\%fullres,'Two activities');
 };
 
-ok(0,'Need to work on commandline incremental build');
