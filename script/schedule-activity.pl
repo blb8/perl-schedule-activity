@@ -20,7 +20,7 @@ sub load {
 sub loadeval {
 	my ($fn)=@_;
 	my $t=load($fn);
-	$t=~s/^\s*[^@$][A-Za-z_]\w+\s*=\s*//s;
+	$t=~s/^\s*[\%\$]?[A-Za-z_]\w+\s*=\s*//s;
 	my %res;
 	if($t=~/^[(]/)    { eval "\%res=$t;";       if($@) { die "$@" } } # )
 	elsif($t=~/^[{]/) { eval "\%res=\%{ $t };"; if($@) { die "$@" } } # }
@@ -33,6 +33,24 @@ sub loadjson {
 	my $t=load($fn);
 	my %res=%{ decode_json($t) };
 	return %res;
+}
+
+sub materialize {
+	my (%schedule)=@_;
+	my @materialized;
+	foreach my $entry (@{$schedule{activities}}) {
+		my $tm=int(0.5+$$entry[0]);
+		if($$entry[1]{message}) {
+			push @materialized,[
+				sprintf('%02d:%02d:%02d'
+					,int($tm/3600)
+					,int(($tm%3600)/60)
+					,($tm%60))
+				,$$entry[1]{message}
+			];
+		}
+	}
+	foreach my $entry (@materialized) { print join(' ',@$entry),"\n" }
 }
 
 my %opt=(
@@ -62,7 +80,7 @@ GetOptions(
 	'tbuffer=f'   =>\$opt{tbuffer},
 	'help'        =>\$opt{help},
 );
-if($opt{help}) { pod2usage(-verbose=>2,-exitval=>2) }
+if($opt{help}) { pod2usage(-verbose=>1,-exitval=>2) }
 
 my %configuration=
 	$opt{schedule} ? loadeval($opt{schedule}) :
@@ -97,21 +115,7 @@ if($opt{notemerge}) {
 	if(%seen) { @{$schedule{activities}}=sort {$$a[0]<=>$$b[0]} @{$schedule{activities}} }
 }
 
-my @materialized;
-foreach my $entry (@{$schedule{activities}}) {
-	my $tm=int(0.5+$$entry[0]);
-	if($$entry[1]{message}) {
-		push @materialized,[
-			sprintf('%02d:%02d:%02d'
-				,int($tm/3600)
-				,int(($tm%3600)/60)
-				,($tm%60))
-			,$$entry[1]{message}
-		];
-	}
-}
-foreach my $entry (@materialized) { print join(' ',@$entry),"\n" }
-
+materialize(%schedule);
 
 __END__
 
@@ -128,15 +132,32 @@ schedule-activity.pl - Build activity schedules.
     configuration:  [--schedule=file | --json=file]
     activities:     [--activity=time,name ... | --activities='time,name;time,name;...']
 
-  options:
-    --check           compile the schedule and report any errors
-    --unsafe          skip safety checks (cycles, non-termination, etc.)
-    --nonotemerge     do not merge annotation messages, default is to merge
-    --noteorder='s'   only merge annotation groups 'name;name;...', default all/alphabetical
-    --tslack=[0,1]    slack tension from 0.0 to 1.0
-    --tbuffer=[0,1]   buffer tension from 0.0 to 1.0
-    --help
+The C<--schedule> file should be a non-cyclic Perl evaluable hash or hash reference.  A C<--json> file should be a hash reference.  The format of the schedule configuration is described in L<Schedule::Activity>.
 
-  The format of the schedule configuration is described in Schedule::Activity.
+=head1 OPTIONS
+
+=head2 --check
+
+Compile the schedule and report any errors.
+
+=head2 --tslack=I<number> and --tbuffer=I<number>
+
+Set the slack or buffer tension.  Values should be from 0.0 to 1.0.
+
+=head2 --noteorder=name;name;...
+
+Only merge the annotation groups specified by the names.  Default is all, alphabetical.
+
+=head2 --nonotemerge
+
+Do not merge annotation messages into the final schedule.
+
+=head2 --unsafe
+
+Skip safety checks, allowing the schedule to contain cycles, non-terminating nodes, etcetera.  Useful during debugging and development.
+
+=head1 NOTES
+
+Unhandled failures in C<Schedule::Activity> are not trapped.  This script may die, and may run unbounded if the schedule contains infinite cycles.
 
 =cut
