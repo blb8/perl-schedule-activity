@@ -9,7 +9,7 @@ use Schedule::Activity::Message;
 use Schedule::Activity::Node;
 use Schedule::Activity::NodeFilter;
 
-our $VERSION='0.2.0';
+our $VERSION='0.2.1';
 
 sub new {
 	my ($ref,%opt)=@_;
@@ -442,7 +442,7 @@ Schedule::Activity - Generate random activity schedules
 
 =head1 VERSION
 
-Version 0.2.0
+Version 0.2.1
 
 =head1 SYNOPSIS
 
@@ -759,11 +759,7 @@ Any message configuration within activity/action nodes may then reference the me
 
 The configuration of a named message may only create string, array, or hash alternative messages; it cannot reference another name.
 
-This feature is experimental starting with version 0.1.2.
-
 =head1 FILTERING
-
-Experimental starting with version 0.1.6.
 
 Action nodes may include prerequisites before they will be selected during scheduling:
 
@@ -833,8 +829,6 @@ This functionality is experimental starting with Version 0.2.1.
 =head1 BUGS
 
 It is possible for some settings to get stuck in an infinite loop:  Be cautious setting C<tmavg=0> for actions.
-
-(This should be fixed in 0.1.7).  There is currently a limitation with scheduling to the maximum buffer that is dependent on the behavior that a list of next actions with only a single entry will return that entry (even if it would have been otherwise filtered).  The exceptions need to be updated so that the maximum buffer includes the tmmax of the conclusion node itself, otherwise the conclusion node will get filtered out and scheduling will fail.
 
 =head1 SEE ALSO
 
