@@ -77,6 +77,7 @@ my %opt=(
 	unsafe    =>undef,
 	check     =>undef,
 	help      =>0,
+	manpage   =>0,
 	activity  =>[],
 	activities=>undef,
 	notemerge =>1,
@@ -101,7 +102,9 @@ GetOptions(
 	'after=s'     =>\$opt{after},
 	'save=s'      =>\$opt{save},
 	'help'        =>\$opt{help},
+	'man'         =>\$opt{man},
 );
+if($opt{man})  { pod2usage(-verbose=>2,-exitval=>2) }
 if($opt{help}) { pod2usage(-verbose=>1,-exitval=>2) }
 
 my (%configuration,%after);
@@ -190,6 +193,26 @@ Do not merge annotation messages into the final schedule.
 =head2 --unsafe
 
 Skip safety checks, allowing the schedule to contain cycles, non-terminating nodes, etcetera.  Useful during debugging and development.
+
+=head2 --after and --save
+
+Run with C<--man> or C<perldoc schedule-activity.pl> for details on these options.
+
+=head1 INCREMENTAL BUILDS
+
+Schedules can be incrementally constructed from a starting configuration as follows:
+
+  schedule-activity.pl --schedule=config.dump --activity=time,name --save=file1a.dat
+  schedule-activity.pl --after=file1a.dat --activity=time,name --save=file2a.dat
+  schedule-activity.pl --after=file2a.dat --nonotemerge
+
+The C<schedule> must be provided initially, and the C<activity> or C<activities> will be built into the list of scheduled activities normally.  Results are stored in the C<save> filename.  Use C<after> to specify a savefile as a starting point for scheduling.  As a special case, omitting an C<activity> list is permitted with an C<after> file, and the saved schedule will be shown on stdout.  The configuration does not need to be indicated after the bootstrapping step.
+
+This permits buliding multiple, randomized schedules from the configuration into separate files for comparison and selection.  Subsequent activities can be built incrementally to achieve targets not specified within the configuration (attribute goals, etc.).
+
+At each step, the schedule is output normally, including annotations unless C<nonotemerge> has been specified.
+
+Annotations are I<not> saved.  Annotations apply generally to all actions in a schedule, so incremental builds are not equivalent to a full schedule build.  While the annotations are shown with the output at each stage of construction, they are recomputed each time.
 
 =head1 NOTES
 
