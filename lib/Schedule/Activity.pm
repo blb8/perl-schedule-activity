@@ -337,11 +337,62 @@ sub scheduler {
 	return @res;
 }
 
+sub goalScheduling {
+	my ($self,%opt)=@_;
+	my %goal=%{delete($opt{goal})};
+	my $cycles=$goal{cycles}//10;
+	my %schedule;
+	eval { %schedule=$self->schedule(%opt) };
+	my ($bestscore,%best);
+	my $notemerge=sub {
+		if(!defined($schedule{annotations})) { return }
+		my %seen;
+		foreach my $group (sort {$a cmp $b} keys(%{$schedule{annotations}})) {
+			if($seen{$group}) { next }
+			if(!defined($schedule{annotations}{$group})) { next }
+			push @{$schedule{activities}},@{$schedule{annotations}{$group}{events}};
+			$seen{$group}=1;
+		}
+		if(%seen) {
+			@{$schedule{activities}}=sort {$$a[0]<=>$$b[0]} @{$schedule{activities}};
+			$self->_recomputeAttributesInto($schedule{attributes},$schedule{activities});
+		}
+	};
+	my $score=sub {
+		my $res=-1e6;
+		if(!defined($schedule{attributes})) { return $res }
+		$res=0;
+		foreach my $k (keys %{$goal{attribute}}) {
+			my %cmp=%{$goal{attribute}{$k}};
+			my %attr=%{$schedule{attributes}{$k}//{}};
+			my $avg=$attr{avg}//0;
+			if   ($cmp{op} eq 'gt') { $res+=$avg-$cmp{value} }
+			elsif($cmp{op} eq 'lt') { $res+=$cmp{value}-$avg }
+		}
+		return $res;
+	};
+	&$notemerge();
+	$bestscore=&$score(); %best=%schedule;
+	#
+	while(--$cycles) {
+		eval { %schedule=$self->schedule(%opt) };
+		if($@) { next }
+		&$notemerge();
+		my $s=&$score();
+		if($s>$bestscore) {
+			$bestscore=$s;
+			%best=%schedule;
+		}
+	}
+	return %best;
+}
+
 sub schedule {
 	my ($self,%opt)=@_;
 	my %check=$self->compile(unsafe=>$opt{unsafe}//$$self{unsafe});
 	if($check{error})                  { return (error=>$check{error}) }
 	if(!is_arrayref($opt{activities})) { return (error=>'Activities must be an array') }
+	if($opt{goal}&&%{$opt{goal}}) { return $self->goalScheduling(%opt) }
 	my $tmoffset=$opt{tmoffset}//0;
 	my %res=(stat=>{slack=>0,buffer=>0});
 	if($opt{after}) {

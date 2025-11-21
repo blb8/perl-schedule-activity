@@ -84,6 +84,7 @@ my %opt=(
 	attribute =>'',
 	tslack    =>undef,
 	tbuffer   =>undef,
+	goal      =>undef,
 	after     =>undef,
 	save      =>undef,
 );
@@ -100,6 +101,7 @@ GetOptions(
 	'attribute=s' =>\$opt{attribute},
 	'tslack=f'    =>\$opt{tslack},
 	'tbuffer=f'   =>\$opt{tbuffer},
+	'goal=s'      =>\$opt{goal},
 	'after=s'     =>\$opt{after},
 	'save=s'      =>\$opt{save},
 	'help'        =>\$opt{help},
@@ -108,7 +110,7 @@ GetOptions(
 if($opt{man})  { pod2usage(-verbose=>2,-exitval=>2) }
 if($opt{help}) { pod2usage(-verbose=>1,-exitval=>2) }
 
-my (%configuration,%after);
+my (%configuration,%after,%goal);
 if($opt{after}) {
 	%after=loadafter($opt{after});
 	%configuration=%{$after{configuration}};
@@ -127,11 +129,17 @@ if($opt{check}) {
 	exit(0);
 }
 
+if($opt{goal}) {
+	eval "\%goal=($opt{goal});";
+	if($@) { die "Goal format failure:  $@" }
+	$opt{notemerge}=0; # workaround for now, since notemerges happen during goal scheduling
+}
+
 if($opt{activities}) { foreach my $pair (split(/;/,$opt{activities})) { push @{$opt{activity}},$pair } }
 if(!@{$opt{activity}}&&!$opt{after}) { die 'Activities are required' }
 for(my $i=0;$i<=$#{$opt{activity}};$i++) { $opt{activity}[$i]=[split(/,/,$opt{activity}[$i],2)] }
 
-my %schedule=$scheduler->schedule(%after,activities=>$opt{activity},tensionslack=>$opt{tslack},tensionbuffer=>$opt{tbuffer});
+my %schedule=$scheduler->schedule(goal=>\%goal,%after,activities=>$opt{activity},tensionslack=>$opt{tslack},tensionbuffer=>$opt{tbuffer});
 if($schedule{error}) { print STDERR join("\n",@{$schedule{error}}),"\n"; exit(1) }
 
 # Workaround.  Until other options are available, annotations canNOT be
@@ -151,8 +159,10 @@ if($opt{notemerge}) {
 		push @{$schedule{activities}},@{$schedule{annotations}{$group}{events}};
 		$seen{$group}=1;
 	}
-	if(%seen) { @{$schedule{activities}}=sort {$$a[0]<=>$$b[0]} @{$schedule{activities}} }
-	$scheduler->_recomputeAttributesInto($schedule{attributes},$schedule{activities});
+	if(%seen) {
+		@{$schedule{activities}}=sort {$$a[0]<=>$$b[0]} @{$schedule{activities}};
+		$scheduler->_recomputeAttributesInto($schedule{attributes},$schedule{activities});
+	}
 }
 
 materialize(%schedule);
@@ -160,6 +170,7 @@ materialize(%schedule);
 if($opt{attribute} eq 'grid') {
 	my $tmmax=$schedule{_tmmax};
 	my $tmstep=int(0.5+$tmmax/10);
+	print "\n";
 	for(my $tm=0;$tm<=$tmmax;$tm+=$tmstep) { print "$tm\t" }; print "avg\tAttribute\n";
 	foreach my $name (sort keys %{$schedule{attributes}}) {
 		my $attr=$schedule{attributes}{$name}{xy};
