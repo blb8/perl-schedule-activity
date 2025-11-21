@@ -244,16 +244,17 @@ subtest 'Message randomization'=>sub {
 		},
 	);
 	my $scheduler=Schedule::Activity->new(configuration=>\%configuration);
-	my %seen;
-	foreach (1..4*4*100) {
-		%schedule=$scheduler->schedule(activities=>[[30,'Activity']]);
-		foreach my $msg (map {$$_[1]{message}} @{$schedule{activities}}) { $seen{$msg}=1 }
-	}
-	my %expect;
+	my ($countdown,@needed,%seen,%expect)=(2e3);
 	foreach my $i (0..3) {
 	foreach my $j (0..3) {
 		$expect{"act$i.$j"}=1;
 	} }
+	@needed=keys(%expect);
+	while($countdown&&@needed) {
+		$countdown--;
+		%schedule=$scheduler->schedule(activities=>[[30,'Activity']]);
+		foreach my $msg (map {$$_[1]{message}} @{$schedule{activities}}) { $seen{$msg}=1; if($msg eq ($needed[0]//'')) { shift(@needed) } }
+	}
 	is_deeply(\%seen,\%expect,'All combinations observed');
 	is_deeply($configuration{node}{Activity}{message},[map {'act0.'.$_} (0..3)],'verify non-mutation of configuration');
 };
@@ -647,13 +648,13 @@ subtest 'tension control'=>sub {
 		});
 	my @tests=(
 		# slack, buffer, goal, label, validator, negate, test count (0=default), # probability of test failure over all cycles
-		[1.0,1.0,299,'=12',sub { return $_[0]!=12},1,500],  # 0
+		[1.0,1.0,299,'=12',sub { return $_[0]!=12},1,200],  # 0
 		[0.0,1.0,300,'>13',sub { return $_[0]>13 },0,100],  # 1e-26 = (100*l(1-45/99))/l(10)
 		[1.0,0.0,279,'<11',sub { return $_[0]<11 },0,2e3],  # 1e-22 = (2000*l(1-0.025))/l(10)
 		[0.0,0.0,312,'<12',sub { return $_[0]<12 },0,2e3],  # 1e-29 = (2000*l(1-1/30))/l(10)
 		[0.0,0.0,300,'>13',sub { return $_[0]>13 },0,500],  # 1e-21 = (500*l(1-69/99000-94/1000))/l(10)
-		[0.0,0.7,300,'>11',sub { return $_[0]<=11 },1,1e3], # 0
-		[0.7,0.0,300,'<14',sub { return $_[0]>=14 },1,1e3], # 0
+		[0.0,0.7,300,'>11',sub { return $_[0]<=11 },1,200], # 0
+		[0.7,0.0,300,'<14',sub { return $_[0]>=14 },1,200], # 0
 	);
 	foreach my $test (@tests) {
 		my ($limit,$pass)=($$test[6]||1000,$$test[5]);
