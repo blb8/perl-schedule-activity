@@ -388,6 +388,23 @@ sub schedule {
 	return %res;
 }
 
+sub _recomputeAttributesInto { # this needs renamed and likely handled by a provided merge function
+	my ($self,$res,$activities)=@_;
+	$self->_attr()->push();
+	$self->_attr()->reset();
+	foreach my $event (@$activities) {
+		my ($tm,$node,$msg)=@$event;
+		if($$node{attributes}) {
+			while(my ($k,$v)=each %{$$node{attributes}}) {
+				$self->_attr()->change($k,%$v,tm=>$tm) } }
+		if(is_hashref($msg)) { while(my ($k,$v)=each %{$$msg{attributes}}) {
+			$self->_attr()->change($k,%$v,tm=>$tm);
+		} }
+	}
+	%$res=$self->_attr()->report();
+	$self->_attr()->pop();
+}
+
 sub loadMarkdown {
 	my ($text)=@_;
 	my $list=qr/(?:\d+\.|[-*])/;
