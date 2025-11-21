@@ -397,7 +397,7 @@ subtest 'Annotations'=>sub {
 		annotations=>{
 			'apple'=>[
 				{
-					message=>'annotation 1',
+					message=>{alternates=>[{message=>'annotation 1',attributes=>{thing=>{incr=>1}}}]},
 					nodes=>qr/action 1/,
 					before=>{min=>-5,max=>-5},
 				},
@@ -411,7 +411,7 @@ subtest 'Annotations'=>sub {
 	);
 	my $scheduler=Schedule::Activity->new(configuration=>\%configuration);
 	my %schedule=$scheduler->schedule(activities=>[[30,'Activity']]);
-	is_deeply($schedule{annotations},{apple=>{events=>[[10,{message=>'annotation 1'}]]}},'Annotations created, overlap removed');
+	is_deeply($schedule{annotations},{apple=>{events=>[[10,{message=>'annotation 1',attributes=>{thing=>{incr=>1}}}]]}},'Annotations created, overlap removed');
 };
 
 subtest 'Named messages'=>sub {

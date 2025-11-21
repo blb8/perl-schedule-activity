@@ -1,5 +1,8 @@
 Revision history for Schedule::Activity
 
+0.2.2 - 2025-??-??
+	- Annotation attributes during merge
+
 0.2.1 - 2025-11-16
 	- Incremental schedule construction
 	- Improved script for --help and --man

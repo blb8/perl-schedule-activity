@@ -371,7 +371,7 @@ sub schedule {
 			my $annotation=Schedule::Activity::Annotation->new(%$note);
 			foreach my $note ($annotation->annotate(@{$res{activities}})) {
 				my ($message,$mobj)=Schedule::Activity::Message->new(message=>$$note[1]{message},names=>$$self{config}{messages}//{})->random();
-				my %node=(message=>$message);
+				my %node=(%{$mobj//{}},message=>$message);
 				if($$note[1]{annotations}) { $node{annotations}=$$note[1]{annotations} }
 				push @schedule,[$$note[0],\%node,@$note[2..$#$note]];
 			}
