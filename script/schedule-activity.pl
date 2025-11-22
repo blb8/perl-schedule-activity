@@ -132,7 +132,6 @@ if($opt{check}) {
 if($opt{goal}) {
 	eval "\%goal=($opt{goal});";
 	if($@) { die "Goal format failure:  $@" }
-	$opt{notemerge}=0; # workaround for now, since notemerges happen during goal scheduling
 }
 
 if($opt{activities}) { foreach my $pair (split(/;/,$opt{activities})) { push @{$opt{activity}},$pair } }
@@ -146,7 +145,7 @@ if($schedule{error}) { print STDERR join("\n",@{$schedule{error}}),"\n"; exit(1)
 # materialized into the activity schedule.  Such nodes are unexpected
 # during subsequent annotation runs, and will need to be stashed/restored
 # if we want to support saving annotations incrementally.
-if($opt{save}) { $opt{notemerge}=0; saveafter($opt{save},\%configuration,\%schedule) }
+if($opt{save}) { saveafter($opt{save},\%configuration,\%schedule) }
 
 if($opt{notemerge}) {
 	my %seen;

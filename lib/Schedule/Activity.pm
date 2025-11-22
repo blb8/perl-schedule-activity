@@ -347,15 +347,16 @@ sub goalScheduling {
 	my $notemerge=sub {
 		if(!defined($schedule{annotations})) { return }
 		my %seen;
+		my @activities=@{$schedule{activities}};
 		foreach my $group (sort {$a cmp $b} keys(%{$schedule{annotations}})) {
 			if($seen{$group}) { next }
 			if(!defined($schedule{annotations}{$group})) { next }
-			push @{$schedule{activities}},@{$schedule{annotations}{$group}{events}};
+			push @activities,@{$schedule{annotations}{$group}{events}};
 			$seen{$group}=1;
 		}
 		if(%seen) {
-			@{$schedule{activities}}=sort {$$a[0]<=>$$b[0]} @{$schedule{activities}};
-			$self->_recomputeAttributesInto($schedule{attributes},$schedule{activities});
+			@activities=sort {$$a[0]<=>$$b[0]} @activities;
+			$self->_recomputeAttributesInto($schedule{attributes},\@activities);
 		}
 	};
 	my $score=sub {
