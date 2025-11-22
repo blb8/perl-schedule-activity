@@ -3,6 +3,7 @@ Revision history for Schedule::Activity
 0.2.2 - 2025-??-??
 	- Annotation attributes during merge
 	- Support attribute reporting from general activity lists
+	- Script --save with --notemerge now matches doc
 
 0.2.1 - 2025-11-16
 	- Incremental schedule construction

@@ -136,7 +136,7 @@ if($schedule{error}) { print STDERR join("\n",@{$schedule{error}}),"\n"; exit(1)
 # materialized into the activity schedule.  Such nodes are unexpected
 # during subsequent annotation runs, and will need to be stashed/restored
 # if we want to support saving annotations incrementally.
-if($opt{save}) { $opt{notemerge}=0; saveafter($opt{save},\%configuration,\%schedule) }
+if($opt{save}) { saveafter($opt{save},\%configuration,\%schedule) }
 
 if($opt{notemerge}) {
 	my %seen;
@@ -149,7 +149,10 @@ if($opt{notemerge}) {
 		push @{$schedule{activities}},@{$schedule{annotations}{$group}{events}};
 		$seen{$group}=1;
 	}
-	if(%seen) { @{$schedule{activities}}=sort {$$a[0]<=>$$b[0]} @{$schedule{activities}} }
+	if(%seen) {
+		@{$schedule{activities}}=sort {$$a[0]<=>$$b[0]} @{$schedule{activities}};
+		%{$schedule{attributes}}=$scheduler->computeAttributes(@{$schedule{activities}});
+	}
 }
 
 materialize(%schedule);
