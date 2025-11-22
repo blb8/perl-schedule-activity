@@ -388,6 +388,24 @@ sub schedule {
 	return %res;
 }
 
+sub computeAttributes {
+	my ($self,@activities)=@_;
+	$self->_attr()->push();
+	$self->_attr()->reset();
+	foreach my $event (sort {$$a[0]<=>$$b[0]} @activities) {
+		my ($tm,$node,$msg)=@$event;
+		if($$node{attributes}) {
+			while(my ($k,$v)=each %{$$node{attributes}}) {
+				$self->_attr()->change($k,%$v,tm=>$tm) } }
+		if(is_hashref($msg)) { while(my ($k,$v)=each %{$$msg{attributes}}) {
+			$self->_attr()->change($k,%$v,tm=>$tm);
+		} }
+	}
+	my %res=$self->_attr()->report();
+	$self->_attr()->pop();
+	return %res;
+}
+
 sub loadMarkdown {
 	my ($text)=@_;
 	my $list=qr/(?:\d+\.|[-*])/;
@@ -713,6 +731,14 @@ The reported C<xy> is an array of values of the form C<(tm, value)>, with each r
 Any attribute may be "fixed" in the log at their current value with the configuration C<name=E<gt>{}>, which is equivalent to C<incr=0> for integers.
 
 Attribute logging always occurs at the beginning and end of the completed schedule, so that all scheduled time affects the weighted average value calculation.  Activities may reset or fix attributes in their beginning or final node; the final node is only the "end of the activity" when C<tmavg=0>.
+
+=head2 Recomputation
+
+Any schedule of activities associated with the initial configuration can generate a standalone attribute report:
+
+  %attributes=$scheduler->computeAttributes(@activities)
+
+This permits manual modification of activities, merging across multiple scheduling runs, or merging of annotations (below) to materialize a final attribute report.  This does not affect the attributes within the C<$scheduler>.
 
 =head1 ANNOTATIONS
 

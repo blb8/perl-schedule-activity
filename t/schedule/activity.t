@@ -3,7 +3,7 @@
 use strict;
 use warnings;
 use Schedule::Activity;
-use Test::More tests=>17;
+use Test::More tests=>18;
 
 subtest 'validation'=>sub {
 	plan tests=>2;
@@ -368,6 +368,44 @@ subtest 'Node+Message attributes'=>sub {
 	is_deeply($schedule{attributes}{intA}{xy}[2],[10,7], 'Integer:  incr/set');
 	is_deeply($schedule{attributes}{intA}{xy}[3],[15,12],'Integer:  incr/incr');
 	is_deeply($schedule{attributes}{intA}{xy}[4],[20,12],'Integer:  end of activity');
+};
+
+subtest 'Attribute recomputation'=>sub {
+	plan tests=>2;
+	my $scheduler=Schedule::Activity->new(configuration=>{
+		node=>{
+			root=>{
+				message=>{alternates=>[{message=>'root',attributes=>{A=>{set=>0}}}]},
+				next=>['step1'],
+				tmavg=>5,
+				finish=>'finish',
+			},
+			step1=>{
+				message=>{alternates=>[{message=>'step1',attributes=>{A=>{incr=>1}}}]},
+				next=>['finish'],
+				tmavg=>5,
+			},
+			finish=>{
+				message=>{alternates=>[{message=>'finish',attributes=>{A=>{incr=>2}}}]},
+				tmavg=>5,
+			},
+		},
+		annotations=>{
+			group=>[
+				{
+					message=>{alternates=>[{message=>'note1',attributes=>{A=>{incr=>1}}}]},
+					nodes=>qr/step1|finish/,
+					before=>{min=>1,max=>2},
+				}
+			],
+		},
+	});
+	my %schedule=$scheduler->schedule(activities=>[[15,'root']]);
+	my %attrScheduler=$$scheduler{attr}->report();
+	my $avgSchedule=$schedule{attributes}{A}{avg};
+	my %attrNotes=$scheduler->computeAttributes(@{$schedule{activities}},@{$schedule{annotations}{group}{events}});
+	is_deeply({$$scheduler{attr}->report()},\%attrScheduler,'Scheduler attributes are unaltered');
+	ok($avgSchedule!=$attrNotes{A}{avg},'Computed attribute differs');
 };
 
 subtest 'Annotations'=>sub {
