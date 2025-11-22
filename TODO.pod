@@ -20,7 +20,7 @@ Incremental scheduling is available in the module and from the commandline start
 
 =head2 Attributes
 
-Attribute recomputation is supported starting with 0.2.2, primarily for merged annotation support.  Attributes as "goals" is planned for 0.2.3.  
+Attribute recomputation is supported starting with 0.2.2, primarily for merged annotation support.  Attributes as "goals" is planned for 0.2.3.
 
 Rudimentary attribute reporting from the commandline is supported starting with 0.2.2.
 
