@@ -180,8 +180,8 @@ if($opt{attribute} eq 'grid') {
 			elsif($i>=$#$attr) { $y=$$attr[$i][1] }
 			elsif($i==0)       { $y=$$attr[0][1] }
 			else {
-				my $p=($tm-$$attr[$i-1][0])/($$attr[$i][0]-$$attr[$i-1][0]);
-				$y=(1-$p)*$$attr[$i-1][1]+$p*$$attr[$i][1];
+				my $p=($tm-$$attr[$i][0])/($$attr[$i+1][0]-$$attr[$i][0]);
+				$y=(1-$p)*$$attr[$i][1]+$p*$$attr[$i+1][1];
 			}
 			print sprintf("%0.4g\t",$y);
 		}
