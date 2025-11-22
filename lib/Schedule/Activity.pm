@@ -9,7 +9,7 @@ use Schedule::Activity::Message;
 use Schedule::Activity::Node;
 use Schedule::Activity::NodeFilter;
 
-our $VERSION='0.2.1';
+our $VERSION='0.2.2';
 
 sub new {
 	my ($ref,%opt)=@_;
@@ -460,7 +460,7 @@ Schedule::Activity - Generate random activity schedules
 
 =head1 VERSION
 
-Version 0.2.1
+Version 0.2.2
 
 =head1 SYNOPSIS
 
