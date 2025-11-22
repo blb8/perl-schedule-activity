@@ -160,7 +160,7 @@ if($opt{notemerge}) {
 	}
 	if(%seen) {
 		@{$schedule{activities}}=sort {$$a[0]<=>$$b[0]} @{$schedule{activities}};
-		$scheduler->_recomputeAttributesInto($schedule{attributes},$schedule{activities});
+		$scheduler->recomputeAttributes($schedule{attributes},$schedule{activities});
 	}
 }
 

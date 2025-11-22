@@ -356,7 +356,7 @@ sub goalScheduling {
 		}
 		if(%seen) {
 			@activities=sort {$$a[0]<=>$$b[0]} @activities;
-			$self->_recomputeAttributesInto($schedule{attributes},\@activities);
+			$self->recomputeAttributes($schedule{attributes},\@activities);
 		}
 	};
 	my $score=sub {
@@ -440,7 +440,7 @@ sub schedule {
 	return %res;
 }
 
-sub _recomputeAttributesInto { # this needs renamed and likely handled by a provided merge function
+sub recomputeAttributes {
 	my ($self,$res,$activities)=@_;
 	$self->_attr()->push();
 	$self->_attr()->reset();
