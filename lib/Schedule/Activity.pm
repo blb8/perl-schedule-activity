@@ -58,8 +58,8 @@ sub _validateConfig {
 		if(!is_hashref($config{messages})) { push @errors,'Messages invalid structure' }
 		else {
 		while(my ($namea,$msga)=each %{$config{messages}}) {
-			if(!is_hashref($msga)) { push @errors,"Messages $namea invalid structure" }
-			elsif(defined($$msga{attributes})&&!is_hashref($$msga{attributes})) { push @errors,"Messages $namea invalid attributes" }
+			if(!is_hashref($msga)) { push @errors,"Messages $namea invalid structure"; next }
+			elsif(defined($$msga{attributes})&&!is_hashref($$msga{attributes})) { push @errors,"Messages $namea invalid attributes"; delete($$msga{attributes}) }
 			else { foreach my $kv (Schedule::Activity::Message::attributesFromConf($msga)) { push @errors,$attr->register($$kv[0],%{$$kv[1]}) } }
 			if(is_hashref($$msga{message})) {
 				if(defined($$msga{message}{alternates})&&!is_arrayref($$msga{message}{alternates})) { push @errors,"Messages $namea invalid alternates" }
