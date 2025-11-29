@@ -510,14 +510,22 @@ Areas subject to change are documented below.  Configurations and goals may lead
 
 =head1 CONFIGURATION
 
+=head2 Overview
+
 A configuration for scheduling contains the following sections:
 
   %configuration=(
     node       =>{...}
-    attributes =>...  # see below
-    annotations=>...  # see below
-    messages   =>...  # see below
+    attributes =>{...} # optional
+    annotations=>{...} # optional
+    messages   =>{...} # optional
   )
+
+The named C<node> entries specify the activities and actions used during schedule construction.  The activity/action keys are used to configure the relationship between nodes, but the I<message> configuration within each node is the primary value used when formatting scheduling results.
+
+All other sections are optional and described below.
+
+=head2 Activities and Actions
 
 Both activities and actions are configured as named C<node> entries.  With this structure, an action and activity may have the same C<message>, but must use different key names.
 
