@@ -8,7 +8,7 @@ Scheduling goals are planned for 0.2.3, specifically of the form C<cycles=N>, C<
 
 =head2 Documentation
 
-Has sadly grown quite complex.  A rewrite is likely, but no ETA.
+Rewrite in progress starting with 0.2.3.  The documentation in L<Schedule::Activity> is very thorough and complete, though some historical information is outdated.  Introductory and overview documentation is somewhat lacking.  That and better organization is the goal of the rewrite, as well as consistent terminology.
 
 =head2 Annotations
 

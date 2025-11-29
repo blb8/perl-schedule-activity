@@ -313,15 +313,14 @@ sub scheduler {
 		else      { $res[$i][3]=-$dt }
 	}
 	#
-	# Full materialization of messages and attributes occurs after all
-	# slack/buffer adjustments have been made.  Node attributes are
-	# the 'defaults', which message attributes applying later.  This
-	# means that all attributes will be applied, but 'set' operations in
-	# messages will 'win'.
+	# Message selection occurs in _nodeMessage during path construction.
+	# Message attributes apply during path construction to permit node
+	# filtering, but final materialization occurs after slack/buffer
+	# adjustments have been made.
 	#
-	# In the future, message selection may occur during path construction,
-	# to achieve goals of node filtering, but random message selection
-	# here will only see the single message in that result.
+	# Both nodes and their messages may change attributes, but node
+	# attributes are applied first, so message attributes will "win" if
+	# both contain 'set' operations.  Documented in "/Precedence".
 	#
 	foreach my $i (0..$#res) {
 		my $node=$res[$i][1];
@@ -523,19 +522,17 @@ A configuration for scheduling contains the following sections:
 Both activities and actions are configured as named C<node> entries.  With this structure, an action and activity may have the same C<message>, but must use different key names.
 
   'activity name'=>{
-    message=>...    # an optional message string or object
-    next   =>[...], # list of child node names
-    finish =>'activity conclusion',
-    #
-    (time specification)
-    (attributes specification)
+    tmavg     =>value, ...,
+    next      =>[...],
+    finish    =>'activity conclusion',
+    message   =>...    # optional
+    attributes=>{...}, # optional
   }
   'action name'=>{
-    message=>...    # an optional message string or object
-    next   =>[...], # list of child node names
-    #
-    (time specification)
-    (attributes specification)
+    tmavg     =>value, ...,
+    next      =>[...],
+    message   =>...    # optional
+    attributes=>{...}, # optional
   }
 
 The list of C<next> nodes is a list of names, which must be defined in the configuration.  During schedule construction, entries will be I<chosen randomly> from the list of C<next> nodes.  The conclusion must be reachable from the initial activity, or scheduling will fail.  There is no further restriction on the items in C<next>:  Scheduling specifically supports cyclic/recursive actions, including self-cycles.
@@ -561,23 +558,18 @@ Scheduling may be controlled with the tension settings described below.  Future 
 
 =head2 Messages
 
-Each activity/action node may contain an optional message.  Messages are provided so the caller can easily format the returned schedules.  While message attributes may be used during schedule, the message strings themselves are not used during scheduling.  Messages may be:
+See L<Schedule::Activity::Message/CONFIGURATION> for all possible message configurations.
 
-  message=>'A message string'
-  message=>'named message key'
-  message=>['An array','of alternates','chosen randomly']
-  message=>{name=>'named message key'}
-  message=>{
-    alternates=>[
-      {message=>'A hash containing an array', attributes=>{...}}
-      {message=>'of alternates',              attributes=>{...}}
-      {message=>'with optional attributes',   attributes=>{...}}
-      {message=>'named message key'}
-      {name=>'named message key'}
-    ]
-  }
+Any activity or action may contain an optional message string or configuration.  Messages permit the caller to easily format generated schedules.  Messages may contain attributes, which can affect subsequent scheduling.  Message attributes are emitted with the attribute response values.
 
-Message selection is randomized for arrays and a hash of alternates.  Named messages must exist (see L</"NAMED MESSAGES"> below).  Any attributes are emitted with the attribute response values, described below.
+A scheduling configuration may declare a list of named messages, which will be available to all message configurations:
+
+  %configuration=(
+    messages=>{
+      'key name'=>{ message configuration }
+      ...
+    },
+  )
 
 =head1 RESPONSE
 
@@ -586,13 +578,13 @@ The response from C<schedule(activities=>[...])> is:
   %schedule=(
     error=>['list of validation errors, if any',...],
     activities=>[
-      [seconds, message],
+      [seconds, event],
       ..,
     ],
     annotations=>{
       'group'=>{
         events=>[
-          [seconds, message],
+          [seconds, event],
         ]
       },
       ...
@@ -728,21 +720,6 @@ Within an individual group, earlier annotations take priority if two events are 
 Annotations do I<not> update the C<attributes> response from C<schedule>.  Because annotations may themselves contain attributes, they are retained separately from the main schedule of activities to permit easier rebuilding.  At this time, however, the caller must verify that annotation schedules before merging them and their attributes into the schedule.  Annotations may also be built separately after schedule construction as described in L<Schedule::Activity::Annotation>.
 
 Annotations may use named messages, and messages in the annotations response structure are materialized using the named message configuration passed to C<schedule>.
-
-=head1 NAMED MESSAGES
-
-A scheduling configuration may contain a list of common messages.  This is particularly useful when there are a large number of common alternate messages where copy/pasting through the scheduling configuration would be egregious.
-
-  %configuration=(
-    messages=>{
-      'key name'=>{ any regular message configuration }
-      ...
-    },
-  )
-
-Any message configuration within activity/action nodes may then reference the message by its key as shown above.  During message selection, any string message or configured C<name> will return the message configuration for C<key=name>, if it exists, or will return the string message.  If a configured message string matches a referenced name, the name takes precedence.
-
-The configuration of a named message may only create string, array, or hash alternative messages; it cannot reference another name.
 
 =head1 FILTERING
 
