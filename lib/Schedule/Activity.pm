@@ -598,14 +598,12 @@ The response from C<schedule(activities=>[...])> is:
       ...
     },
     attributes=>{
-      name=>{
-        y  =>(final value),
-        xy =>[[tm,value],...],
-        avg=>(average, depends on type),
-      },
+      name=>{attribute report},
       ...
     },
   )
+
+For the "attribute report", see L<Schedule::Activity::Attribute/RESPONSE>.
 
 =head2 Failures
 
@@ -649,27 +647,23 @@ The scheduling response contains C<{stat}> that reports the accumulated slack an
 
 =head1 ATTRIBUTES
 
-Attributes permit tracking boolean or numeric values during schedule construction.  The result of C<schedule> contains attribute information that can be used to verify or adjust the schedule.
-
-=head2 Types
-
-The two types of attributes are C<bool> or C<int>, which is the default.  A boolean attribute is primarily used as a state flag.  An integer attribute can be used both as a counter or gauge, either to track the number of occurrences of an activity or event, or to log varying numeric values.
+Attributes permit tracking boolean or numeric values that can be used to affect node selection during schedule construction.  The resulting attribute history can be used to verify the final schedule or compute goal scores.
 
 =head2 Configuration
 
-Multiple attributes can be referenced from any activity/action.  For example:
+For a complete description of attribute configuration options, see L<Schedule::Activity::Attribute>.
 
-  'activity/action name'=>{
+Attributes may be referenced from an activity, action, or message.  For example:
+
+  'action name'=>{
     attributes=>{
       temperature=>{set=>value, incr=>value, decr=>value, note=>'comment'},
-      counter    =>{set=>value, incr=>value, note=>'comment'},
-      flag       =>{set=>0/1, note=>'comment'},
+      counter    =>{set=>value, incr=>value},
+      flag       =>{set=>0/1},
     },
   }
 
-Any attribute may include a C<note> for convenience, but this value is not stored nor reported.
-
-The main configuration can also declare attribute names and starting values.  It is recommended to set any non-zero initial values in this fashion, since calling C<set> requires that activity to always be the first requested in the schedule.  Boolean values must be declared in this section:
+The scheduling configuration may also declare attribute names and starting values.
 
   %configuration=(
     attributes=>{
@@ -679,40 +673,9 @@ The main configuration can also declare attribute names and starting values.  It
     },
   )
 
+Boolean types must be declared in this section.  It is recommended to set any non-zero initial values in this fashion, since calling C<set> requires that activity to always be the first requested in the schedule.  
+
 Attributes within message alternate configurations and named messages are identified during configuration validation.  Together with activity/action configurations, attributes are verified before schedule construction, which will fail if an attribute name is referenced in a conflicting manner.
-
-=head2 Response values
-
-The response from C<schedule> includes an C<attributes> section as:
-
-  attributes=>{
-    name=>{
-      y  =>(final value),
-      xy =>[[tm,value],...],
-      avg=>(average, depends on type),
-    },
-    ...
-  }
-
-The C<y> value is the last recorded value in the schedule.  The C<xy> contains an array of all values and the times at which they changed; see Logging.  The C<avg> is roughly the time-weighted average of the value, but this depends on the attribute type.
-
-If an activity containing a unique attribute is not used during construction, the attribute will still be included in the response with its default and initial value.
-
-=head2 Integer attributes
-
-The C<int> type is the default for attributes.  If initialized in C<%configuration>, it may specify the type, or the value, or both.  The default value is zero, but this may be overwritten if the first activity node specifically calls C<set>.
-
-Integer attributes within activity/actions support all of:  C<set>, C<incr>, C<decr>.  There is no actual restriction on type so any Perl L<number> is valid, integers or real numbers, positive or negative.
-
-The reported C<avg> is the overall time-weighted average of the values, computed via a trapezoid rule.  That is, if C<tm=0, value=2> and C<tm=10, value=12>, the average is 7 with a weight of 10.  See Logging for more details.
-
-=head2 Boolean attributes
-
-The C<bool> type must be declared in C<%configuration>.  The value may be specified, but defaults to zero/false.
-
-Boolean attributes within activity/actions support:  C<set>.  Currently there is no restriction on values, but the behavior is only defined for values 0/1.
-
-The reported C<avg> is the percentage of time in the schedule for which the flag was true.  That is, if C<tm=0, value=0>, and C<tm=7, value=1>, and C<tm=10, value=1> is the complete schedule, then the reported average for the boolean will be C<0.3>.
 
 =head2 Precedence
 
@@ -724,13 +687,9 @@ When an activity/action node and a selected message both contain attributes, the
   set=5   incr=6    11
   incr=7  incr=8    15
 
-=head2 Logging
+=head2 Average Values
 
-The reported C<xy> is an array of values of the form C<(tm, value)>, with each representing an activity/action referencing that attribute built into the schedule.  Each attribute will have its initial value of C<(0, value)>, either the default or the value specified in C<configuration{attributes}>.
-
-Any attribute may be "fixed" in the log at their current value with the configuration C<name=E<gt>{}>, which is equivalent to C<incr=0> for integers.
-
-Attribute logging always occurs at the beginning and end of the completed schedule, so that all scheduled time affects the weighted average value calculation.  Activities may reset or fix attributes in their beginning or final node; the final node is only the "end of the activity" when C<tmavg=0>.
+Attributes are always logged at the beginning and end of the completed schedule, so that all scheduled time affects the weighted average value calculation.  Activities may reset or fix attributes as needed in their beginning or final node; note that the final node is only the "end of the activity" when C<tmavg=0>.
 
 =head2 Recomputation
 
@@ -738,7 +697,7 @@ Any schedule of activities associated with the initial configuration can generat
 
   %attributes=$scheduler->computeAttributes(@activities)
 
-This permits manual modification of activities, merging across multiple scheduling runs, or merging of annotations (below) to materialize a final attribute report.  This does not affect the attributes within the C<$scheduler>.
+This permits manual modification of activities, merging across multiple scheduling runs, or merging of annotations (below) to materialize a final attribute report.  This does not affect the attributes within the C<$scheduler> object itself.
 
 =head1 ANNOTATIONS
 
