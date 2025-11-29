@@ -541,11 +541,14 @@ Both activities and actions are configured as named C<node> entries.  With this 
     next      =>[...],
     message   =>...    # optional
     attributes=>{...}, # optional
+    require   =>{...}, # optional
   }
 
 The list of C<next> nodes is a list of names, which must be defined in the configuration.  During schedule construction, entries will be I<chosen randomly> from the list of C<next> nodes.  The conclusion must be reachable from the initial activity, or scheduling will fail.  There is no further restriction on the items in C<next>:  Scheduling specifically supports cyclic/recursive actions, including self-cycles.
 
 There is no functional difference between activities and actions except that a node must contain C<finish> to be used for activity scheduling.  Nomenclature is primarily to support schedule organization:  A collection of random actions is used to build an activity; a sequence of activities is used to build a schedule.
+
+The C<require> configuration specifies attribute value prerequisites, computed from the current attribute values, that must be met for an action node to be a candidate for random selection.  See L<Schedule::Activity::NodeFilter> for available filtering criteria, but see L</"SCHEDULING ALGORITHM"> regarding attribute value consistency.
 
 =head2 Time specification
 
@@ -641,6 +644,12 @@ The random computed time is a uniform distribution around the current time, but 
 
 The default values are 0.5 for the slack tension, and ~0.85 for the buffer tension.  This gives an expected number of actions that is very close to C<goal/tmavg>, roughly plus 10% minus 5%.
 
+=head2 Attributes
+
+During scheduling, filtering is evaluated as a I<single pass> only, per activity:  When finding a sequence of actions to fulfill a scheduling goal for an activity, candidates (from C<next>) are checked based on the current attributes.  Action times during construction are based on C<tmavg>, so any filter using attribute average values will be computed as if the action sequence only used C<tmavg>.  After a solution is found, however, actions are adjusted across the total slack/buffer available, so the "materialized average" attribute values can be slightly different.
+
+This should never affect attributes used for a stateful/flag/counter-based filter, because those value changes will still occur in the same sequence.
+
 =head3 Response
 
 The scheduling response contains C<{stat}> that reports the accumulated slack and buffer used for all actions, as well as C<slackttl> and C<bufferttl> which represent the maximum available.  The amount of slack used during scheduling is C<slack/slackttl>, and the same for buffer.  These values can assist with choosing tension settings based on the specific configuration.
@@ -728,27 +737,6 @@ Within an individual group, earlier annotations take priority if two events are 
 Annotations do I<not> update the C<attributes> response from C<schedule>.  Because annotations may themselves contain attributes, they are retained separately from the main schedule of activities to permit easier rebuilding.  At this time, however, the caller must verify that annotation schedules before merging them and their attributes into the schedule.  Annotations may also be built separately after schedule construction as described in L<Schedule::Activity::Annotation>.
 
 Annotations may use named messages, and messages in the annotations response structure are materialized using the named message configuration passed to C<schedule>.
-
-=head1 FILTERING
-
-Action nodes may include prerequisites before they will be selected during scheduling:
-
-  'action name'=>{
-    require=>{
-      ...
-    }
-    ...
-  }
-
-During schedule construction, the list of C<next> actions will be filtered by C<require> to identify candidate actions.  The current attribute values at the time of selection will be used to perform the evaluation.  The available filtering criteria are fully described in L<Schedule::Activity::NodeFilter> and include attribute numeric comparison and Boolean operators.
-
-Action filtering may be used, together with attribute setting and increments, to prevent certain actions from appearing if others have not previously occurred, or vice versa.  This mechanism may also be used to specify global or per-activity limits on certain actions.
-
-=head2 Slack and Buffer
-
-During scheduling, filtering is evaluated as a I<single pass> only, per activity:  When finding a sequence of actions to fulfill a scheduling goal for an activity, candidates (from C<next>) are checked based on the current attributes.  Action times during construction are based on C<tmavg>, so any filter using attribute average values will be computed as if the action sequence only used C<tmavg>.  After a solution is found, however, actions are adjusted across the total slack/buffer available, so the "materialized average" attribute values can be slightly different.
-
-This should never affect attributes used for a stateful/flag/counter-based filter, because those value changes will still occur in the same sequence.
 
 =head1 IMPORT MECHANISMS
 
