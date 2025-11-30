@@ -1,26 +1,40 @@
 =pod
 
+=head1 Overview
+
+=head2 Before 0.3.0
+
+The following are planned as part of the 0.3.0 release.
+
+=over
+
+=item Script incremental builds (done)
+
+=item Script attribute reporting (done)
+
+=item Documentation rewrite
+
+=item Goal scheduling
+
+=item Attribute average values
+
+=item Node filtering for average values
+
+=back
+
 =head1 Features
 
 =head2 Goals
 
-Scheduling goals are planned for 0.2.3, specifically of the form C<cycles=N>, C<attribute=E<gt>{name=E<gt>{op=>'gt|lt',value=>x}}>.  Rescheduling will repeat through C<cycles> and the schedule with the highest score will be returned.  Only attribute-based goals seeking is planned for 0.2.3.
+Scheduling goals are planned of the form C<cycles=N>, C<attribute=E<gt>{name=E<gt>{op=E<gt>'max|min'},name=E<gt>{op=E<gt>'eq|ne',value=E<gt>x}}>.  Rescheduling will repeat through C<cycles> and the schedule with the highest score will be returned.  Only attribute-based goals seeking is planned at this time.
 
 =head2 Documentation
 
 Rewrite in progress starting with 0.2.3.  The documentation in L<Schedule::Activity> is very thorough and complete, though some historical information is outdated.  Introductory and overview documentation is somewhat lacking.  That and better organization is the goal of the rewrite, as well as consistent terminology.
 
-=head2 Annotations
-
-Annotation filtering.  Some annotations may occur before an action but not when after certain other actions.  Annotations should support node filtering for this situation.
-
-=head2 Scheduling
-
-Incremental scheduling is available in the module and from the commandline starting with 0.2.1.  Attribute recomputation is supported for materialized annotations starting with 0.2.2.  Ideally a finalized savefile could also store annotations.
-
 =head2 Attributes
 
-Attribute recomputation is supported starting with 0.2.2, primarily for merged annotation support.  Attributes as "goals" is planned for 0.2.3.
+Attribute recomputation is supported starting with 0.2.2, primarily for merged annotation support.  Attributes as "goals" is planned for 0.2.3--5.
 
 Rudimentary attribute reporting from the commandline is supported starting with 0.2.2.
 
@@ -40,6 +54,22 @@ But consider the very next step of the process.  Suppose that the node, when the
 
 That is, the attribute value is fixed up to the current time minus epsilon, and thus the speculative average at that time can be computed and represents the rolling average as updated to the current time.  If the chosen node adjusts the value, and thus the rolling average, that would only affect selection of future nodes.
 
+=head2 Annotations
+
+Annotation filtering.  Some annotations may occur before an action but not when after certain other actions.  Annotations should support node filtering for this situation.  No timeline has been established.
+
+Annotations may also benefit from a schedule-wide closeness configuration, but no timeline has been established.
+
+=head2 Scheduling
+
+Incremental scheduling is available in the module and from the commandline starting with 0.2.1.  Attribute recomputation is supported for materialized annotations starting with 0.2.2.  Ideally a finalized savefile could also store materialized annotations, but no timeline has been established.
+
+=head2 Tension configuration
+
+Rebuilt in 0.1.9 to provide better control over slack and buffer tensions separately.  Behavior is established based on mathematical distribution, which is uniform stepwise leading to a skewed distribution for overall schedules.  Tension settings affect path selection, but the scheduler will fail for the full path if there is insufficient slack/buffer to adjust the path to the goal time.  This may change in the future, namely additional tension settings may permit scheduling completion even if the measured slack/buffer wouldn't otherwise permit adjustment.  See the distribution in C<samples/tension.png> and documentation in L<Schedule::Activity>.
+
+Tension should also be configurable in the outer scheduling step.  This would permit incrementally relaxing the scheduler in case of retries.  No timeline has been established.
+
 =head2 Tutorial
 
 A basic tutorial and sample configuration is provided starting with 0.2.0.  It may be extended.
@@ -47,10 +77,6 @@ A basic tutorial and sample configuration is provided starting with 0.2.0.  It m
 =head2 Action limits
 
 The case C<limit=1> is not the primary/initial use case of this scheduler, but some events will likely never be repeated.  This can already be achieved by setting the attribute to zero initially, incrementing as appropriate, and then filtering.  Because there's a difference between limit-per-activity and limit-per-schedule, it's not clear that a special mechanism will be created.
-
-=head2 Tension configuration
-
-Rebuilt in 0.1.9 to provide better control over slack and buffer tensions separately.  Behavior is established based on mathematical distribution, which is uniform stepwise leading to a skewed distribution for overall schedules.  Tension settings affect path selection, but the scheduler will fail for the full path if there is insufficient slack/buffer to adjust the path to the goal time.  This may change in the future, namely additional tension settings may permit scheduling completion even if the measured slack/buffer wouldn't otherwise permit adjustment.  See the distribution in C<samples/tension.png> and documentation in L<Schedule::Activity>.
 
 =head2 Slack/buffer defaults
 

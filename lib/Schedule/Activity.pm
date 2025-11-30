@@ -644,6 +644,10 @@ The random computed time is a uniform distribution around the current time, but 
 
 The default values are 0.5 for the slack tension, and ~0.85 for the buffer tension.  This gives an expected number of actions that is very close to C<goal/tmavg>, roughly plus 10% minus 5%.
 
+See the distributions in C<samples/tension.png>.
+
+
+
 =head2 Attributes
 
 During scheduling, filtering is evaluated as a I<single pass> only, per activity:  When finding a sequence of actions to fulfill a scheduling goal for an activity, candidates (from C<next>) are checked based on the current attributes.  Action times during construction are based on C<tmavg>, so any filter using attribute average values will be computed as if the action sequence only used C<tmavg>.  After a solution is found, however, actions are adjusted across the total slack/buffer available, so the "materialized average" attribute values can be slightly different.
