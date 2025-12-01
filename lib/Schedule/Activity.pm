@@ -455,7 +455,7 @@ __END__
 
 =head1 NAME
 
-Schedule::Activity - Generate random activity schedules
+Schedule::Activity - Generate activity schedules
 
 =head1 VERSION
 
@@ -476,7 +476,7 @@ Version 0.2.2
         'action 1'=>{
           message=>'Begin action 1',
           tmmin=>5,tmavg=>10,tmmax=>15,
-          next=>['action 2'],
+          next=>['action 1','action 2'],
         },
         'action 2'=>{
           message=>'Begin action 2',
@@ -502,11 +502,9 @@ Version 0.2.2
 
 =head1 DESCRIPTION
 
-This module permits building schedules of I<activities> each containing randomly-generated lists of I<actions>.  This two-level approach uses explicit I<goal> times to construct the specified list of activities.  Within activities, actions are chosen within configured limits, possibly with randomization and cycling, using I<slack> and I<buffer> timing adjustments to achieve the goal.
+This module permits building schedules of I<activities> each containing randomly-generated lists of I<actions>.  Each activity is scheduled to a target time by selecting randomly selecting actions within the configured graph, which may contain repetition and cycles, and by using I<slack> and I<buffer> timing adjustments.  Attributes may be attached to events and messages, both for reporting and to control scheduling toward a I<goal>.  Annotations permit construction of secondary messages around events.
 
-For additional examples, see the C<samples/> directory.
-
-Areas subject to change are documented below.  Configurations and goals may lead to cases that currently C<die()>, so callers should plan to trap and handle these exceptions accordingly.
+For additional examples, see the tutorial and the C<samples/> directory.
 
 =head1 CONFIGURATION
 
@@ -563,6 +561,8 @@ Values must be non-negative numbers.  All three values may be identical.  Note t
 
 The slack is the amount of time that could be reduced in an action before it would need to be removed/replaced in the schedule.  The buffer is the amount of time that could be added to an action before additional actions would be needed in the schedule.
 
+Caution:  While startup/conclusion of activities may have fixed time specifications (including zero time), it is recommended, though not mandatory, that actions always contain some slack/buffer.  There is currently no "relaxing mechanism" during scheduling, so a configuration with no slack nor buffer must exactly meet the goal time requested to succeed.
+
 Providing any time value will automatically set any missing values at the fixed ratios 3,4,5.  EG, specifying only C<tmmax=40> will set C<tmmin=24> and C<tmavg=32>.  If provided two time values, priority is given to C<tmavg> to set the third.
 
 Scheduling may be controlled with the tension settings described below.  Future changes may support automatic slack/buffering, univeral slack/buffer ratios, and open-ended/relaxed slack/buffering.
@@ -592,29 +592,32 @@ The response from C<schedule(activities=>[...])> is:
       [seconds, event],
       ..,
     ],
-    annotations=>{
-      'group'=>{
-        events=>[
-          [seconds, event],
-        ]
-      },
-      ...
-    },
+    annotations=>{...}
     attributes=>{
       name=>{attribute report},
       ...
     },
   )
 
+=head2 Success Response
+
+When scheduling is successful, the list of events is in the C<activities> array.  Each event is an array containing the timestamp, and an event node containing a C<{message}>.  Scheduling always occurs in order, so activities should appear in non-decreasing timestamp order.  Timestamp units are undefined, so formatting is the responsibility of the caller.
+
+The C<event{message}> is materialized during schedule construction, so the response will only contain the single, chosen message for the event.  Alternate messages attached to the underlying event node, or a referenced name message, are not included in the response.
+
+The "annotations" response is described below in L</ANNOTATIONS>.
+
 For the "attribute report", see L<Schedule::Activity::Attribute/RESPONSE>.
 
-=head2 Failures
+=head2 Validation Errors
 
-In addition to validation failures returned through C<error>, the following may cause the scheduler to C<die()>:  The activity name is undefined.  The scheduler was not able to reach the named finish node.  The number of retries or backtracking attempts has been exhausted.
+If the configuration fails prechecks, findings will be reported in the C<error> array and scheduling will not be attempted.  Configuration errors include invalid type/structures, invalid node keys/values, messages/attributes/annotations, as well as basic activity/action reachability checks.  Note that node filtering (via a "require" configuration) may prevent scheduling despite these basic reachability checks.
+
+=head2 Unhandled Errors
+
+In addition to validation failures returned through C<error>, the following may cause the scheduler to C<die()>:  The requested activity name is undefined.  The scheduler was not able to reach the named finish node.  The number of retries or backtracking attempts has been exhausted.
 
 The difference between the result time and the goal may cause retries when an excess exceeds the available slack, or when a shortage exceeds the available buffer.
-
-Caution:  While startup/conclusion of activities may have fixed time specifications, at this time it is recommended that actions always contain some slack/buffer.  There is currently no "relaxing mechanism" during scheduling, so a configured with no slack nor buffer must exactly meet the goal time requested.
 
 =head1 SCHEDULING ALGORITHM
 
