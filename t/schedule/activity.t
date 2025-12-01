@@ -834,11 +834,12 @@ subtest 'Goal seeking'=>sub {
 	# If you want to make this succeed faster, run only 5-step schedules, 1/2^5, and maxouter=436.
 	#
 	my ($pass,$steps,$maxouter)=(0,0,14141); # pfail<=1e-6
-	for(my $outer=0;$outer<=$maxouter;$outer++) {
-		$steps++;
-		%schedule=$scheduler->schedule(activities=>[[10,'start']],tensionbuffer=>1,tensionslack=>1);
-		if(1+$#{$schedule{activities}}!=12) { next }
-		if($schedule{attributes}{bee}{y}>=10) { $pass=1; $outer=$maxouter }
+	while($steps<$maxouter) {
+		my $cycles=int(20+rand(100));
+		$steps+=$cycles;
+		%schedule=$scheduler->schedule(goal=>{cycles=>$cycles,attribute=>{bee=>{op=>'gt',value=>0}}},activities=>[[10,'start']],tensionbuffer=>1,tensionslack=>1);
+		if(1+$#{$schedule{activities}}!=12)   { next }
+		if($schedule{attributes}{bee}{y}>=10) { $pass=1; $maxouter=$steps }
 	}
 	ok($pass,"Goal scheduling maximized attribute ($steps steps)");
 };
