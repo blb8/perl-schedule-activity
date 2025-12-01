@@ -12,7 +12,7 @@ The following are planned as part of the 0.3.0 release.
 
 =item Script attribute reporting (done)
 
-=item Documentation rewrite
+=item Documentation rewrite (done)
 
 =item Goal scheduling
 
