@@ -619,46 +619,6 @@ In addition to validation failures returned through C<error>, the following may 
 
 The difference between the result time and the goal may cause retries when an excess exceeds the available slack, or when a shortage exceeds the available buffer.
 
-=head1 SCHEDULING ALGORITHM
-
-The configuration of the C<next> actions is the primary contributor to the schedules that can be built.  As with all algorithms of this type, there are many configurations that simply won't work well:  For example, this is not a maze solver, a best path finder, nor a resourcing optimization system.  Scheduling success toward the stated goals generally requires that actions have different C<tmmin>, C<tmmax>, and C<tmavg>, and that actions permit reasonable repetition and recursion.  Highly imbalanced actions, such as a branch of length 10 and another of length 5000, may always fail depending on the goal.  Neverthless, for the activities and actions so described, how does it work?
-
-The scheduler is a randomized, opportunistic, single-step path growth algorithm.  An activity starts at the indicated node.  At each step, the C<next> entries are filtered and a random action is chosen, then the process repeats.  The selection of the next step is restricted based on the I<current time> (at the end of the action) as follows.
-
-First, a I<random current time> is computed based on the current time, the accumulated slack and buffer, and the tension settings (see below).  If the random current time is less than the goal time, the next action will be a random non-final node, if available, or the final node if all other choices are filtered or unavailable.
-
-If the random current time is greater than the goal time and the final action is listed as a C<next> action, it will be chosen.
-
-In all other cases, a random C<next> action will be chosen.
-
-=head2 Tension
-
-Schedule construction proceeds toward the goal time incrementally, with each action appending its C<tmavg> until the goal is reached.  If the accumulated average times were exactly equal to the goal for the activity, schedules would be unambiguous.  For repeating, recursive scheduling, however, it's necessary to consider scenarios where the actions don't quite reach the goal or where they extend beyond the goal.
-
-=head3 Buffer and Slack
-
-Each activity node and action has buffer and slack, as defined above, that contributes to the accumulated total buffer and slack.  The amount of buffer/slack that contributes to the random current time is controlled by including C<schedule(tensionbuffer=E<gt>value)> and C<tensionslack=E<gt>value>, each between 0 and 1.  Tension effectively controls how little of each contributes toward randomization around the goal.
-
-In the 'laziest' mode, with C<tension=0.0>, all available buffer/slack is used to establish the random current time, increasing the likelihood that it is greater than the goal.  With a lower buffer tension, for example, scheduling is more likely to reach the final activity node sooner, and thus will contain a smaller number of actions on average, each stretched toward C<tmmax>.  With a higher tension, the goal time must be met (or exceeded) before aggressively seeking the final activity node, so schedules will contain a larger number of actions, each compressed toward C<tmmin>.
-
-The tension for slack is similar, with lower values permitting a larger number of actions beyond the goal, each compressed toward C<tmmin>, whereas with tension near 1, scheduling will seek the final activity node as soon as the schedule time exceeds the goal, resulting in a smaller number of activities.
-
-The random computed time is a uniform distribution around the current time, but because actions are scheduled incrementally, this leads to a skewed distribution that favors a smaller number of actions.  See C<samples/tension.png> for the distributions where exactly 100 repeated actions would be expected.
-
-The default values are 0.5 for the slack tension, and ~0.85 for the buffer tension.  This gives an expected number of actions that is very close to C<goal/tmavg>, roughly plus 10% minus 5%.
-
-See the distributions in C<samples/tension.png>.
-
-=head2 Attributes
-
-During scheduling, filtering is evaluated as a I<single pass> only, per activity:  When finding a sequence of actions to fulfill a scheduling goal for an activity, candidates (from C<next>) are checked based on the current attributes.  Action times during construction are based on C<tmavg>, so any filter using attribute average values will be computed as if the action sequence only used C<tmavg>.  After a solution is found, however, actions are adjusted across the total slack/buffer available, so the "materialized average" attribute values can be slightly different.
-
-This should never affect attributes used for a stateful/flag/counter-based filter, because those value changes will still occur in the same sequence.
-
-=head3 Response
-
-The scheduling response contains C<{stat}> that reports the accumulated slack and buffer used for all actions, as well as C<slackttl> and C<bufferttl> which represent the maximum available.  The amount of slack used during scheduling is C<slack/slackttl>, and the same for buffer.  These values can assist with choosing tension settings based on the specific configuration.
-
 =head1 ATTRIBUTES
 
 Attributes permit tracking boolean or numeric values that can be used to affect node selection during schedule construction.  The resulting attribute history can be used to verify the final schedule or compute goal scores.
@@ -756,9 +716,74 @@ Annotations do I<not> update the C<attributes> response from C<schedule>.  Becau
 
 =head2 Merging
 
-At this time, the caller must merge groups of annotations into C<schedule{activities}> manually.  Group order may matter, and the behavior of overlapping or nearby event times must be prioritized based on needs.  When constructing schedules incrementally, it is recommended to use the C<nonote> option described in L</"INCREMENTAL CONSTRUCTION">.
+At this time, the caller must merge groups of annotations into C<schedule{activities}> manually.  Group order may matter, and the behavior of overlapping or nearby event times must be prioritized based on needs.  When constructing schedules incrementally, it is recommended to use the C<nonote> option described in L</"Incremental Construction">.
 
 Rudimentary merging mechanisms are provided in C<schedule-activity.pl>.
+
+=head1 SCHEDULING ALGORITHM
+
+=head2 Overview
+
+The configuration of the C<next> actions is the primary contributor to the schedules that can be built.  As with all algorithms of this type, there are many configurations that simply won't work well:  For example, this is not a maze solver, a best path finder, nor a resourcing optimization system.  Scheduling success toward the stated goals generally requires that actions have different C<tmmin>, C<tmmax>, and C<tmavg>, and that actions permit reasonable repetition and recursion.  Highly imbalanced actions, such as a branch of length 10 and another of length 5000, may always fail depending on the goal.  Neverthless, for the activities and actions so described, how does it work?
+
+The scheduler is a randomized, opportunistic, single-step path growth algorithm.  An activity starts at the indicated node.  At each step, the C<next> entries are filtered and a random action is chosen, then the process repeats.  The selection of the next step is restricted based on the I<current time> (at the end of the action) as follows.
+
+First, a I<random current time> is computed based on the current time, the accumulated slack and buffer, and the tension settings (see below).  If the random current time is less than the goal time, the next action will be a random non-final node, if available, or the final node if all other choices are filtered or unavailable.
+
+If the random current time is greater than the goal time and the final action is listed as a C<next> action, it will be chosen.
+
+In all other cases, a random C<next> action will be chosen.
+
+=head2 Buffer and Slack
+
+Schedule construction proceeds toward the goal time incrementally, with each action appending its C<tmavg> until the goal is reached.  If the accumulated average times were exactly equal to the goal for the activity, schedules would be unambiguous.  For repeating, recursive scheduling, however, it's necessary to consider scenarios where the actions don't quite reach the goal or where they extend beyond the goal.
+
+Each activity node and action has buffer and slack, as defined above, that contributes to the accumulated total buffer and slack.  The amount of buffer/slack that contributes to the random current time is controlled by including C<schedule(tensionbuffer=E<gt>value)> and C<tensionslack=E<gt>value>, each between 0 and 1.  Tension effectively controls how little of each contributes toward randomization around the goal.
+
+In the 'laziest' mode, with C<tension=0.0>, all available buffer/slack is used to establish the random current time, increasing the likelihood that it is greater than the goal.  With a lower buffer tension, for example, scheduling is more likely to reach the final activity node sooner, and thus will contain a smaller number of actions on average, each stretched toward C<tmmax>.  With a higher tension, the goal time must be met (or exceeded) before aggressively seeking the final activity node, so schedules will contain a larger number of actions, each compressed toward C<tmmin>.
+
+The tension for slack is similar, with lower values permitting a larger number of actions beyond the goal, each compressed toward C<tmmin>, whereas with tension near 1, scheduling will seek the final activity node as soon as the schedule time exceeds the goal, resulting in a smaller number of activities.
+
+The random computed time is a uniform distribution around the current time, but because actions are scheduled incrementally, this leads to a skewed distribution that favors a smaller number of actions.  See C<samples/tension.png> for the distributions where exactly 100 repeated actions would be expected.
+
+The default values are 0.5 for the slack tension, and approximately 0.85 for the buffer tension.  This gives an expected number of actions that is very close to C<goal/tmavg> (skewed distribution as plus 10% minus 5%).
+
+The scheduling response contains C<{stat}> that reports the accumulated slack and buffer used for all actions, as well as C<slackttl> and C<bufferttl> which represent the maximum available.  The amount of slack used during scheduling is C<slack/slackttl>, and the same for buffer.  These values can assist with choosing tension settings based on the specific configuration.
+
+=head2 Consistency
+
+Attributes may be used for filtering during schedule construction.  When scheduling an activity, a temporary history of attributes is built.  Each activity/action node will update attributes, after which any materialized message will update attributes.  Node filtering applies to the last recorded attributes, independent of any actions a candidate node may take on attributes.  Filtering occurs before random node selection.
+
+After reaching the target time for an activity, event times are updated based on the total slack/buffer time available.  The actual attribute history is constructed from those adjusted times, and will be visible to the next activity scheduled.
+
+Node filtering does not currently support attribute average values, however:  Filtering is evaluated as a I<single pass> only, so average values visible during filtering may be slightly different than averages after slack/buffer adjustments.
+
+Annotations are computed separately by groups.  Attributes arising from merged annotations do not affect attributes retroactively (nor, obviously, any node filtering).  See L</Recomputation>.
+
+Scheduling proceeds stepwise, and "consistency" is defined as adherence to the computed values I<at that time>.  No recomputation occurs, except through full retries (such as goal seeking).  All of the following can create paradoxes that are avoided with this approach:  Slack/buffer adjustments can alter attribute average values leading to different node filtering/selection.  Slack/buffer adjustments can produce times that open other action branches that may have be unavailable during scheduling.  Annotations that are merged may adjust attributes such that the nodes they are annotating would disappear.  Nodes may adjust attributes such that the final node is unreachable.
+
+=head2 Incremental Construction
+
+For longer schedules with multiple activities, regenerating a full schedule because of issues with a single activity can be time consuming.  A more interactive approach would be to build and verify the first activity, then review choices for the second activity schedule, append it, and continue.  After full scheduling construction, annotations can be built.
+
+Incremental schedules can be built using the C<after> and C<nonote> options:
+
+  # Use nonote to avoid annotation build at this time
+  my $choiceA=$scheduler->schedule(nonote=>1, activities=>[[600,'activity1']);
+  my $choiceB=$scheduler->schedule(nonote=>1, activities=>[[600,'activity1']);
+  #
+  # two or more choices are reviewed and one is selected
+  my %res=$scheduler->schedule(after=>$choiceB, activities=>[[600,'activity2']);
+
+The schedule indicated via C<after> signals that the scheduler should build the activities and extend the schedule.  Attributes are automatically loaded from the earlier part of the schedule and affect node filtering normally.
+
+Annotations, which may apply to any node by name, are dropped when the schedule is extended.  This is because a single annotation may have a limit and match nodes across activities, so full regeneration is necessary.  To make generation more efficient, C<nonote> may be set to skip annotation generation in earlier steps.
+
+The final result above does generate annotations, but it's also possible to pass C<nonote> at each step and then generate annotations without adding activities by calling:
+
+  my %res=$scheduler->schedule(after=>$earlierSchedule, activities=>[]);
+
+This functionality is experimental starting with Version 0.2.1.
 
 =head1 IMPORT MECHANISMS
 
@@ -782,29 +807,6 @@ Any list identification markers may be used interchangably (number plus period, 
 The imported configuration permits an activity to be followed by any of its actions, and any action can be followed by any other action within the activity (but not itself).  Any action can terminate the activity.
 
 The full settings needed to build a schedule can be loaded with C<%settings=loadMarkdown(text)>, and both C<$settings{configuration}> and C<$settings{activities}> will be defined so an immediate call to C<schedule(%settings)> can be made.
-
-=head1 INCREMENTAL CONSTRUCTION
-
-For longer schedules with multiple activities, regenerating a full schedule because of issues with a single activity can be time consuming.  A more interactive approach would be to build and verify the first activity, then review choices for the second activity schedule, append it, and continue.  After full scheduling construction, annotations can be built.
-
-Incremental schedules can be built using the C<after> and C<nonote> options:
-
-  # Use nonote to avoid annotation build at this time
-  my $choiceA=$scheduler->schedule(nonote=>1, activities=>[[600,'activity1']);
-  my $choiceB=$scheduler->schedule(nonote=>1, activities=>[[600,'activity1']);
-  #
-  # two or more choices are reviewed and one is selected
-  my %res=$scheduler->schedule(after=>$choiceB, activities=>[[600,'activity2']);
-
-The schedule indicated via C<after> signals that the scheduler should build the activities and extend the schedule.  Attributes are automatically loaded from the earlier part of the schedule and affect node filtering normally.
-
-Annotations, which may apply to any node by name, are dropped when the schedule is extended.  This is because a single annotation may have a limit and match nodes across activities, so full regeneration is necessary.  To make generation more efficient, C<nonote> may be set to skip annotation generation in earlier steps.
-
-The final result above does generate annotations, but it's also possible to pass C<nonote> at each step and then generate annotations without adding activities by calling:
-
-  my %res=$scheduler->schedule(after=>$earlierSchedule, activities=>[]);
-
-This functionality is experimental starting with Version 0.2.1.
 
 =head1 BUGS
 
