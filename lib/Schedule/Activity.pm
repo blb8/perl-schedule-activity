@@ -646,8 +646,6 @@ The default values are 0.5 for the slack tension, and ~0.85 for the buffer tensi
 
 See the distributions in C<samples/tension.png>.
 
-
-
 =head2 Attributes
 
 During scheduling, filtering is evaluated as a I<single pass> only, per activity:  When finding a sequence of actions to fulfill a scheduling goal for an activity, candidates (from C<next>) are checked based on the current attributes.  Action times during construction are based on C<tmavg>, so any filter using attribute average values will be computed as if the action sequence only used C<tmavg>.  After a solution is found, however, actions are adjusted across the total slack/buffer available, so the "materialized average" attribute values can be slightly different.
@@ -714,18 +712,31 @@ This permits manual modification of activities, merging across multiple scheduli
 
 =head1 ANNOTATIONS
 
-A scheduling configuration may contain a list of annotations:
+=head2 Overview
+
+Annotations are secondary messages and/or attributes that are attached to the scheduling configuration and are inserted around activity/action nodes.  Annotations are divided into named I<groups>, permitting separation by category, and each named group contains a list of annotations (or "notes").
+
+=head2 Configuration
+
+Annotations are configuration in the C<annotations> section of the scheduling configuration:
 
   %configuration=(
     annotations=>{
       'annotation group'=>[
         {annotation configuration},
         ...
-      ]
+      ],
+      ...
     },
   )
 
-Scheduling I<annotations> are a collection of secondary events to be attached to the built schedule and are configured as described in L<Schedule::Activity::Annotation>.  Each named group can have one or more annotation.  Each annotation will be inserted around the matching actions in the schedule and be reported from C<schedule> in the annotations section as:
+Each named group is an array, and each note configuration is a hash, as described in L<Schedule::Activity::Annotation>.  Annotations may use named messages from the scheduling configuration.
+
+Within an individual group, earlier annotations take priority if two events are scheduled at the same time.  Because groups are generated separately, multiple groups of annotations may have conflicting event times in the results.  Note that the C<between> setting is only enforced for each annotation individually at this time, and not for notes within the same group.
+
+=head2 Response
+
+Annotation groups are generated after scheduling is complete and are reported in the annotations section as:
 
   annotations=>{
     'group'=>{
@@ -736,11 +747,15 @@ Scheduling I<annotations> are a collection of secondary events to be attached to
     },
   }
 
-Within an individual group, earlier annotations take priority if two events are scheduled at the same time.  Multiple groups of annotations may have conflicting event schedules with event overlap.  Note that the C<between> setting is only enforced for each annotation individually at this time.
+Messages in the response are materialized using any named messages, and have the same structure as the message response for activity/action events.
 
-Annotations do I<not> update the C<attributes> response from C<schedule>.  Because annotations may themselves contain attributes, they are retained separately from the main schedule of activities to permit easier rebuilding.  At this time, however, the caller must verify that annotation schedules before merging them and their attributes into the schedule.  Annotations may also be built separately after schedule construction as described in L<Schedule::Activity::Annotation>.
+Annotations do I<not> update the C<attributes> response from C<schedule>.  Because annotations may themselves contain attributes, they are retained separately from the main schedule of activities to permit easier rebuilding.
 
-Annotations may use named messages, and messages in the annotations response structure are materialized using the named message configuration passed to C<schedule>.
+=head2 Merging
+
+At this time, the caller must merge groups of annotations into C<schedule{activities}> manually.  Group order may matter, and the behavior of overlapping or nearby event times must be prioritized based on needs.  When constructing schedules incrementally, it is recommended to use the C<nonote> option described in L</"INCREMENTAL CONSTRUCTION">.
+
+Rudimentary merging mechanisms are provided in C<schedule-activity.pl>.
 
 =head1 IMPORT MECHANISMS
 
