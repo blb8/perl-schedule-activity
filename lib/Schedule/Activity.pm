@@ -366,8 +366,8 @@ sub goalScheduling {
 			my %cmp=%{$goal{attribute}{$k}};
 			my %attr=%{$schedule{attributes}{$k}//{}};
 			my $avg=$attr{avg}//0;
-			if   ($cmp{op} eq 'gt') { $res+=$avg-$cmp{value} }
-			elsif($cmp{op} eq 'lt') { $res+=$cmp{value}-$avg }
+			if   ($cmp{op} eq 'max') { $res+=$avg }
+			elsif($cmp{op} eq 'min') { $res-=$avg }
 		}
 		return $res;
 	};

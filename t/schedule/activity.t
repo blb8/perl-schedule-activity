@@ -820,7 +820,7 @@ subtest 'Incremental build'=>sub {
 # associated probabilities.
 # 
 subtest 'Goal seeking'=>sub {
-	plan tests=>1;
+	plan tests=>2;
 	my ($scheduler,%schedule);
 	$scheduler=Schedule::Activity->new(configuration=>{node=>{
 		start=>{next=>[qw/A B/],finish=>'finish',tmavg=>0,attributes=>{bee=>{set=>0}}},
@@ -837,9 +837,24 @@ subtest 'Goal seeking'=>sub {
 	while($steps<$maxouter) {
 		my $cycles=int(20+rand(100));
 		$steps+=$cycles;
-		%schedule=$scheduler->schedule(goal=>{cycles=>$cycles,attribute=>{bee=>{op=>'gt',value=>0}}},activities=>[[10,'start']],tensionbuffer=>1,tensionslack=>1);
+		%schedule=$scheduler->schedule(goal=>{cycles=>$cycles,attribute=>{bee=>{op=>'max'}}},activities=>[[10,'start']],tensionbuffer=>1,tensionslack=>1);
 		if(1+$#{$schedule{activities}}!=12)   { next }
 		if($schedule{attributes}{bee}{y}>=10) { $pass=1; $maxouter=$steps }
 	}
 	ok($pass,"Goal scheduling maximized attribute ($steps steps)");
+	#
+	# Probability of bee=-10 is 1/2^10.
+	# Probability of failure in N trials is (1023/1024)^N
+	# If you want to make this succeed faster, run only 5-step schedules, 1/2^5, and maxouter=436.
+	#
+	($pass,$steps,$maxouter)=(0,0,14141); # pfail<=1e-6
+	while($steps<$maxouter) {
+		my $cycles=int(20+rand(100));
+		$steps+=$cycles;
+		%schedule=$scheduler->schedule(goal=>{cycles=>$cycles,attribute=>{bee=>{op=>'min'}}},activities=>[[10,'start']],tensionbuffer=>1,tensionslack=>1);
+		if(1+$#{$schedule{activities}}!=12)   { next }
+		if($schedule{attributes}{bee}{y}<=-10) { $pass=1; $maxouter=$steps }
+	}
+	ok($pass,"Goal scheduling minimized attribute ($steps steps)");
+	#
 };
