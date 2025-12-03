@@ -820,7 +820,7 @@ subtest 'Incremental build'=>sub {
 # associated probabilities.
 # 
 subtest 'Goal seeking'=>sub {
-	plan tests=>3;
+	plan tests=>4;
 	my ($scheduler,%schedule);
 	$scheduler=Schedule::Activity->new(configuration=>{node=>{
 		start=>{next=>[qw/A B/],finish=>'finish',tmavg=>0,attributes=>{bee=>{set=>0}}},
@@ -856,6 +856,21 @@ subtest 'Goal seeking'=>sub {
 		if($schedule{attributes}{bee}{y}<=-10) { $pass=1; $maxouter=$steps }
 	}
 	ok($pass,"Goal scheduling minimized attribute ($steps steps)");
+	#
+	# To test for inequality (average zero), verify that both extremes are reached
+	# Must achieve sequence 1,2,3,...,10,10, so the average is (1/2+(2+3+...+9)+10/2+10)/10=5.95
+	my %seen;
+	($pass,$steps,$maxouter)=(0,0,2*14141); # pfail<=1e-6
+	while($steps<$maxouter) {
+		my $cycles=int(20+rand(100));
+		$steps+=$cycles;
+		%schedule=$scheduler->schedule(goal=>{cycles=>$cycles,attribute=>{bee=>{op=>'ne',value=>0}}},activities=>[[10,'start']],tensionbuffer=>1,tensionslack=>1);
+		if(1+$#{$schedule{activities}}!=12)   { next }
+		if($schedule{attributes}{bee}{avg}<=-5.95) { $seen{min}++ }
+		if($schedule{attributes}{bee}{avg}>=+5.95) { $seen{max}++ }
+		if($seen{min}&&$seen{max}) { $pass=1; $maxouter=$steps }
+	}
+	ok($pass,"Goal scheduling inequality attribute ($steps steps)");
 	#
 	# Target a sequence of events with final average zero.
 	# The final node creates a final timestamp that affects the average value computation.

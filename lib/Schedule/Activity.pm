@@ -369,6 +369,7 @@ sub goalScheduling {
 			if   ($cmp{op} eq 'max') { $res+=$avg }
 			elsif($cmp{op} eq 'min') { $res-=$avg }
 			elsif($cmp{op} eq 'eq')  { $res-=abs($avg-$cmp{value}) }
+			elsif($cmp{op} eq 'ne')  { $res+=abs($avg-$cmp{value}) }
 			elsif($cmp{op} eq 'XX')  {
 				my $xy=$attr{xy}//[];
 				foreach my $i (0..$#$xy-1) {
