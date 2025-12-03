@@ -820,7 +820,7 @@ subtest 'Incremental build'=>sub {
 # associated probabilities.
 # 
 subtest 'Goal seeking'=>sub {
-	plan tests=>2;
+	plan tests=>3;
 	my ($scheduler,%schedule);
 	$scheduler=Schedule::Activity->new(configuration=>{node=>{
 		start=>{next=>[qw/A B/],finish=>'finish',tmavg=>0,attributes=>{bee=>{set=>0}}},
@@ -856,5 +856,33 @@ subtest 'Goal seeking'=>sub {
 		if($schedule{attributes}{bee}{y}<=-10) { $pass=1; $maxouter=$steps }
 	}
 	ok($pass,"Goal scheduling minimized attribute ($steps steps)");
+	#
+	# Target a sequence of events with final average zero.
+	# The final node creates a final timestamp that affects the average value computation.
+	# Ergo, in this test, the final node will increase the attribute by one.
+	# Any sequence that repeats 1,0,-1,0,...,1 will have final average zero as needed.
+	# Length is 4n.
+	#
+	# Probability of avg=0 is 1/2^(4n)
+	# Probability of failure in M trials is less than P when:
+	# n=1, M=215, P=1e-6
+	# n=2, M=3529, P=1e-6
+	# l(10^(-6))/(l(2^4-1)-l(2^4))
+	#
+	$scheduler=Schedule::Activity->new(configuration=>{node=>{
+		start=>{next=>[qw/A B/],finish=>'finish',tmavg=>0,attributes=>{bee=>{set=>0}}},
+		finish=>{tmavg=>0,attributes=>{bee=>{incr=>+1}}},
+		A=>{attributes=>{bee=>{incr=>-1}},tmavg=>1,next=>[qw/A B finish/]},
+		B=>{attributes=>{bee=>{incr=>+1}},tmavg=>1,next=>[qw/A B finish/]},
+	}});
+	($pass,$steps,$maxouter)=(0,0,3530); # pfail<=1e-6
+	while($steps<$maxouter) {
+		my $cycles=int(20+rand(40));
+		$steps+=$cycles;
+		%schedule=$scheduler->schedule(goal=>{cycles=>$cycles,attribute=>{bee=>{op=>'eq',value=>0}}},activities=>[[8,'start']],tensionbuffer=>1,tensionslack=>1);
+		if(1+$#{$schedule{activities}}!=10)   { next }
+		if($schedule{attributes}{bee}{avg}==0) { $pass=1; $maxouter=$steps }
+	}
+	ok($pass,"Goal scheduling equality attribute ($steps steps)");
 	#
 };
