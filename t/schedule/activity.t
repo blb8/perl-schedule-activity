@@ -820,7 +820,7 @@ subtest 'Incremental build'=>sub {
 # associated probabilities.
 # 
 subtest 'Goal seeking'=>sub {
-	plan tests=>4;
+	plan tests=>5;
 	my ($scheduler,%schedule);
 	$scheduler=Schedule::Activity->new(configuration=>{node=>{
 		start=>{next=>[qw/A B/],finish=>'finish',tmavg=>0,attributes=>{bee=>{set=>0}}},
@@ -899,5 +899,27 @@ subtest 'Goal seeking'=>sub {
 		if($schedule{attributes}{bee}{avg}==0) { $pass=1; $maxouter=$steps }
 	}
 	ok($pass,"Goal scheduling equality attribute ($steps steps)");
+	#
+	# For an off-center equality check (since the {value} could well be ignored by the code), suppose the nodes only increase by 1, or by 0 (as opposed to decreasing), and suppose the last step increases by 0 (the final node).
+	# 49.5=(0/2+(1+2+3+4+5+6+7+8+9)+9/2), so the first must be +1, after that however there are quite a few combinations.
+	# It turns out there are only 3 out of 1024 that have an exact average of 5.
+	# Probability of avg=5 is 3/1024
+	# Probability of failure in M trials is less than P when:  M>=l(P)/l(1021/1024)
+	#
+	$scheduler=Schedule::Activity->new(configuration=>{node=>{
+		start=>{next=>[qw/A B/],finish=>'finish',tmavg=>0,attributes=>{bee=>{set=>0}}},
+		finish=>{tmavg=>0},
+		A=>{attributes=>{bee=>{incr=>+0}},tmavg=>1,next=>[qw/A B finish/]},
+		B=>{attributes=>{bee=>{incr=>+1}},tmavg=>1,next=>[qw/A B finish/]},
+	}});
+	($pass,$steps,$maxouter)=(0,0,4709); # pfail<=1e-6
+	while($steps<$maxouter) {
+		my $cycles=int(20+rand(40));
+		$steps+=$cycles;
+		%schedule=$scheduler->schedule(goal=>{cycles=>$cycles,attribute=>{bee=>{op=>'eq',value=>5}}},activities=>[[10,'start']],tensionbuffer=>1,tensionslack=>1);
+		if(1+$#{$schedule{activities}}!=12)   { next }
+		if($schedule{attributes}{bee}{avg}==5) { $pass=1; $maxouter=$steps }
+	}
+	ok($pass,"Goal scheduling equality (offcenter) attribute ($steps steps)");
 	#
 };
