@@ -820,7 +820,7 @@ subtest 'Incremental build'=>sub {
 # associated probabilities.
 # 
 subtest 'Goal seeking'=>sub {
-	plan tests=>5;
+	plan tests=>6;
 	my ($scheduler,%schedule);
 	$scheduler=Schedule::Activity->new(configuration=>{node=>{
 		start=>{next=>[qw/A B/],finish=>'finish',tmavg=>0,attributes=>{bee=>{set=>0}}},
@@ -921,5 +921,14 @@ subtest 'Goal seeking'=>sub {
 		if($schedule{attributes}{bee}{avg}==5) { $pass=1; $maxouter=$steps }
 	}
 	ok($pass,"Goal scheduling equality (offcenter) attribute ($steps steps)");
+	#
+	$scheduler=Schedule::Activity->new(configuration=>{node=>{
+		start=>{next=>[qw/A B/],finish=>'finish',tmavg=>0,attributes=>{bee=>{set=>0}}},
+		finish=>{tmavg=>0},
+		A=>{attributes=>{bee=>{incr=>+0}},tmmin=>2,tmavg=>2,tmmax=>2,next=>[qw/A B finish/]},
+		B=>{attributes=>{bee=>{incr=>+1}},tmmin=>2,tmavg=>2,tmmax=>2,next=>[qw/A B finish/]},
+	}});
+	eval { %schedule=$scheduler->schedule(goal=>{cycles=>20,attribute=>{bee=>{op=>'max'}}},activities=>[[11,'start']],tensionbuffer=>1,tensionslack=>1) };
+	like($@,qr/Excess exceeds/,'Goal scheduling raises last error if no schedule found');
 	#
 };

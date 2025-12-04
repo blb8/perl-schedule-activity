@@ -381,10 +381,11 @@ sub goalScheduling {
 	};
 	&$notemerge();
 	$bestscore=&$score(); %best=%schedule;
+	my $lasterr;
 	#
 	while(--$cycles) {
 		eval { %schedule=$self->schedule(%opt) };
-		if($@) { next }
+		if($@) { $lasterr=$@; next }
 		&$notemerge();
 		my $s=&$score();
 		if($s>$bestscore) {
@@ -392,6 +393,7 @@ sub goalScheduling {
 			%best=%schedule;
 		}
 	}
+	if(!%best&&$lasterr) { die $lasterr }
 	return %best;
 }
 
