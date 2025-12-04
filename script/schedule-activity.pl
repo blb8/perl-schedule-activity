@@ -231,6 +231,10 @@ Do not merge annotation messages into the final schedule.
 
 Display all attributes, their values over time, and averages.  (No other output formats are supported at this time)
 
+=head2 --goal=(hash)
+
+Provide a Perl hash string of the form C<'cycles=E<gt>N,attribute=E<gt>{...}'> as described in L<Schedule::Activity/Goals> to enable attribute-based goal seeking.
+
 =head2 --unsafe
 
 Skip safety checks, allowing the schedule to contain cycles, non-terminating nodes, etcetera.  Useful during debugging and development.
