@@ -847,6 +847,24 @@ The final result above does generate annotations, but it's also possible to pass
 
 This functionality is experimental starting with Version 0.2.1.
 
+=head2 Goals
+
+Goal seeking retries schedule construction and finds the best, I<random> schedule meeting criteria for attribute average values:
+
+  %schedule=$scheduler->schedule(goal=>{
+    cycles=>N,
+    attribute=>{
+      'name'=>{op=>'max'},
+      'name'=>{op=>'min'},
+      'name'=>{op=>'eq', value=>x},
+      'name'=>{op=>'ne', value=>x},
+    }
+  },...)
+
+One or more attributes may be included in the goal, and each of the C<cycles> (default 10) schedules will be scored based on the configured conditions.  The C<max> and C<min> operators seek the largest/smallest attribute I<average value> for the schedule.  The C<eq> and C<ne> operators score near/far from the provided C<value>.  Note that generated schedules may have a different number of activities, so some attribute goals may be equivalent to finding the shortest/longest action counts.
+
+Goal scheduling is experimental starting with 0.2.4.  Attributes currently have equal weighting and scores are linear.  If no schedule can be generated, the most recent error will raise via C<die()>.  Goals can be different during different invocations of incremental construction.
+
 =head1 IMPORT MECHANISMS
 
 =head2 Markdown
