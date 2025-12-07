@@ -504,7 +504,7 @@ subtest 'Named messages'=>sub {
 };
 
 subtest 'Node filtering'=>sub {
-	plan tests=>3;
+	plan tests=>4;
 	my (%schedule,$scheduler,%seen,$pass);
 	my %configuration=(
 		node=>{
@@ -572,6 +572,30 @@ subtest 'Node filtering'=>sub {
 	}
 	if($seen{'Begin action 2'}) { $pass=0 }
 	ok($pass,'Always blocked node never appears');
+	#
+	# The average should be (100*0.5+(tm-100)*1)/tm
+	# Ergo, tm>=50/(1-target)
+	my $target=0.73;
+	my $expect=50/(1-$target);
+	$scheduler=Schedule::Activity->new(configuration=>{node=>{
+		root    =>{attributes=>{averager=>{set=>0}},tmmin=>100,tmavg=>100,tmmax=>100,next=>['preloop'],finish=>'finish'},
+		finish  =>{tmavg=>0},
+		preloop =>{attributes=>{averager=>{set=>1}},tmavg=>0,next=>['looper']},
+		looper  =>{tmmin=>1,tmavg=>1,tmmax=>1,next=>[qw/looper postloop/]},
+		postloop=>{
+			require=>{attr=>'averager',f=>'avg',op=>'ge',value=>$target},
+			next=>['finish'],
+			tmavg=>0,
+		},
+	}});
+	%schedule=();
+	my $firsthit;
+	for(my $runtime=$expect-10;$runtime<=$expect+10;$runtime++) {
+		eval    { %schedule=$scheduler->schedule(activities=>[[$runtime,'root']]) };
+		if(!$@) { $firsthit=$schedule{_tmmax}; $runtime=200 }
+	}
+	ok(abs($firsthit-$expect)<=1,'Average value (growth)');
+	#
 };
 
 subtest 'Reachability'=>sub {

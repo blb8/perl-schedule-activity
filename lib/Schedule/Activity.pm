@@ -246,10 +246,13 @@ sub findpath {
 		push @res,[$tm,$node];
 		push @{$res[-1]},_nodeMessage($opt{attr},$tm+$opt{tmoffset},$node);
 		$node->increment(\$tm,\$slack,\$buffer);
+		$opt{attr}->push();
+		$opt{attr}->log($tm);
 		if($tm-$tension{slack}*$slack+rand($tension{buffer}*$buffer+$tension{slack}*$slack)<=$opt{goal}) {
 			$node=$node->nextrandom(not=>$conclusion,tm=>$tm,attr=>$opt{attr}{attr})//$node->nextrandom(tm=>$tm,attr=>$opt{attr}{attr}) }
 		elsif($node->hasnext($conclusion)) { $node=$conclusion }
 		else { $node=$node->nextrandom(not=>$conclusion,tm=>$tm,attr=>$opt{attr}{attr})//$node->nextrandom(tm=>$tm,attr=>$opt{attr}{attr}) }
+		$opt{attr}->pop();
 	}
 	if($node&&($node eq $conclusion)) {
 		push @res,[$tm,$conclusion];

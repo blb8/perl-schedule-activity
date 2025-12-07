@@ -11,6 +11,7 @@ my %matcher=(
 	boolean=>\&matchBoolean,
 	elapsed=>\&matchElapsed,
 	value  =>\&matchValue,
+	avg    =>\&matchValue,
 );
 
 sub new {
@@ -76,7 +77,8 @@ sub matchElapsed {
 sub matchValue {
 	my ($self,$tm,%attributes)=@_;
 	my $v=$attributes{$$self{attr}}//{};
-	if($$self{f} eq 'value') { $v=$$v{value} }
+	if   ($$self{f} eq 'value') { $v=$$v{value} }
+	elsif($$self{f} eq 'avg')   { $v=$$v{avg} }
 	else { die "Not yet available $$self{f}" }
 	if(defined($$self{value})) {
 		if(!defined($v)) { return 0 }
