@@ -21,16 +21,17 @@ my %types=(
 sub new {
 	my ($ref,%opt)=@_;
 	my $class=ref($ref)||$ref;
+	my ($tm,$y)=($opt{tm}//0,$opt{value}//0);
 	my %self=(
 		type =>$opt{type}//'int',
-		value=>$opt{value}//0,
-		log  =>{},
-		tmmax=>$opt{tm}//0,
-		avg  =>undef,
-		tmsum=>undef,
+		value=>$y,
+		log  =>{$tm=>$y},
+		aog  =>{$tm=>$y},
+		tmmax=>$tm,
+		avg  =>$y,
+		tmsum=>0,
 	);
 	if(!defined($types{$self{type}})) { die "Attribute invalid type:  $self{type}" }
-	$self{log}{$opt{tm}//0}=$self{value};
 	return bless(\%self,$class);
 }
 
@@ -44,7 +45,7 @@ sub validateConfig {
 
 sub log {
 	my ($self,$tm)=@_;
-	if(defined($tm)&&($tm>=$$self{tmmax})) { $$self{log}{$tm}=$$self{value}; $$self{tmmax}=$tm }
+	if(defined($tm)&&($tm>=$$self{tmmax})) { $$self{log}{$tm}=$$self{value}; $$self{aog}{$tm}=$$self{avg}//$$self{value}; $$self{tmmax}=$tm }
 	# historic entry is not currently supported
 	return $self;
 }
@@ -65,7 +66,7 @@ sub report {
 	return (
 		y  =>$$self{value},
 		xy =>[$self->_xy()],
-		avg=>($self->average())[0],
+		avg=>$self->average(),
 	);
 }
 
@@ -85,9 +86,11 @@ sub average {
 sub reset {
 	my ($self)=@_;
 	foreach my $tm (sort {$a<=>$b} keys %{$$self{log}}) { $$self{tmmax}=$tm; $$self{value}=$$self{log}{$tm}; last }
-	%{$$self{log}}=();
-	$$self{avg}=undef;
-	$$self{tmsum}=undef;
+	my ($y,$tm)=@$self{qw/value tmmax/};
+	%{$$self{log}}=($tm=>$y);
+	%{$$self{aog}}=($tm=>$y);
+	$$self{avg}=$y;
+	$$self{tmsum}=0;
 	return $self;
 }
 
@@ -95,6 +98,7 @@ sub dump {
 	my ($self)=@_;
 	my %res=(
 		log=>{ %{$$self{log}} },
+		aog=>{ %{$$self{aog}} },
 		(map {$_=>$$self{$_}} qw/type value tmmax avg tmsum/),
 	);
 	return %res;
@@ -106,20 +110,22 @@ sub restore {
 		foreach my $k (keys %opt) { $$ref{$k}=$opt{$k} }
 		return $ref;
 	}
+	my $y=$opt{value}//0;
 	my %self=(
 		type =>$opt{type}//'int',
-		value=>$opt{value}//0,
+		value=>$y,
 		log  =>$opt{log}//{},
+		aog  =>$opt{aog}//{},
 		tmmax=>$opt{tmmax}//0,
-		avg  =>$opt{avg},
-		tmsum=>$opt{tmsum},
+		avg  =>$opt{avg}//$y,
+		tmsum=>$opt{tmsum}//0,
 	);
 	return bless(\%self,$ref);
 }
 
 sub _xy {
 	my ($self)=@_;
-	return map {[$_,$$self{log}{$_}]} sort {$a<=>$b} keys %{$$self{log}};
+	return map {[$_,$$self{log}{$_},$$self{aog}{$_}]} sort {$a<=>$b} keys %{$$self{log}};
 }
 
 # set=>value
@@ -166,14 +172,13 @@ sub _avgInt {
 	my ($log)=@_;
 	my ($avg,$weight,$lasttm,$lasty)=(0,0);
 	foreach my $tm (sort {$a<=>$b} keys(%$log)) {
-		if(!defined($lasttm)) { ($lasttm,$lasty)=($tm,$$log{$tm}); next }
+		if(!defined($lasttm)) { ($lasttm,$lasty,$avg,$weight)=($tm,$$log{$tm},$$log{$tm},0); next }
 		my $dt=$tm-$lasttm;
 		$avg=$weight/($weight+$dt)*$avg+0.5*$dt/($weight+$dt)*($lasty+$$log{$tm});
 		$weight+=$dt;
 		$lasttm=$tm;
 		$lasty=$$log{$tm};
 	}
-	if($weight==0) { return (undef,undef) }
 	return ($avg,$weight);
 }
 
@@ -181,14 +186,14 @@ sub _avgBool {
 	my ($log)=@_;
 	my ($sum,$weight,$lasttm,$lasty)=(0,0);
 	foreach my $tm (sort {$a<=>$b} keys(%$log)) {
-		if(!defined($lasttm)) { ($lasttm,$lasty)=($tm,$$log{$tm}); next }
+		if(!defined($lasttm)) { ($lasttm,$lasty,$sum,$weight)=($tm,$$log{$tm},$$log{$tm},0); next }
 		my $dt=$tm-$lasttm;
 		$sum+=$lasty*($tm-$lasttm);
 		$weight+=$dt;
 		$lasttm=$tm;
 		$lasty=$$log{$tm};
 	}
-	if($weight==0) { return (undef,undef) }
+	if($weight==0) { return ($sum,$weight) }
 	return ($sum/$weight,$weight);
 }
 
