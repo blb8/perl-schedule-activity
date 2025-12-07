@@ -9,7 +9,7 @@ use Schedule::Activity::Message;
 use Schedule::Activity::Node;
 use Schedule::Activity::NodeFilter;
 
-our $VERSION='0.2.4';
+our $VERSION='0.2.5';
 
 sub new {
 	my ($ref,%opt)=@_;
@@ -524,7 +524,7 @@ Schedule::Activity - Generate activity schedules
 
 =head1 VERSION
 
-Version 0.2.4
+Version 0.2.5
 
 =head1 SYNOPSIS
 
@@ -817,11 +817,13 @@ The scheduling response contains C<{stat}> that reports the accumulated slack an
 
 =head2 Consistency
 
-Attributes may be used for filtering during schedule construction.  When scheduling an activity, a temporary history of attributes is built.  Each activity/action node will update attributes, after which any materialized message will update attributes.  Node filtering applies to the last recorded attributes, independent of any actions a candidate node may take on attributes.  Filtering occurs before random node selection.
+Attributes may be used for filtering during schedule construction.  When scheduling an activity, a temporary history of attributes is built and used as action nodes are selected.
 
-After reaching the target time for an activity, event times are updated based on the total slack/buffer time available.  The actual attribute history is constructed from those adjusted times, and will be visible to the next activity scheduled.
+Node filtering applies to the last recorded attributes, independent of any actions a candidate node may take on attributes.  Attribute averages values are updated to the "random current time", as if the attribute value was fixed between the last recorded entry and the random current time, prior to node filtering comparisons.
 
-Node filtering does not currently support attribute average values, however:  Filtering is evaluated as a I<single pass> only, so average values visible during filtering may be slightly different than averages after slack/buffer adjustments.
+After any filtering and random selection, each activity/action node will update attributes, after which any materialized message will update attributes.  
+
+After reaching the target time for an activity, event times are updated based on the total slack/buffer time available.  The actual attribute history is constructed from those adjusted times, and will be visible to the next activity scheduled.  Filtering is evaluated as a I<single pass> only, so average values visible during filtering may be slightly different than averages after slack/buffer adjustments.
 
 Annotations are computed separately by groups.  Attributes arising from merged annotations do not affect attributes retroactively (nor, obviously, any node filtering).  See L</Recomputation>.
 

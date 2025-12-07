@@ -3,7 +3,7 @@ package Schedule::Activity::Attribute;
 use strict;
 use warnings;
 
-our $VERSION='0.2.4';
+our $VERSION='0.2.5';
 
 my %types=(
 	int=>{
@@ -269,14 +269,14 @@ The reported C<avg> is the percentage of time in the schedule for which the flag
 Each named attribute in a scheduling configuration uses the C<report> function, described below, to build an attribute report that includes:
 
   y  =>(final value)
-  xy =>[[tm,value],...]
+  xy =>[[tm,value,average],...]
   avg=>(average, depends on type)
 
-The C<y> value is the last recorded value.  The C<xy> contains an array of all values and the times at which they changed.  The C<avg> is roughly the time-weighted average of the value, but this depends on the attribute type.
+The C<y> value is the last recorded value.  The C<xy> contains an array of all values, averages, and the times at which they changed.  The C<avg> is roughly the time-weighted average of the value, but this depends on the attribute type.
 
 =head2 Logging
 
-The reported C<xy> is an array of values of the form C<(tm, value)>, with each timestamped entry indicating that a scheduling activity, action, or message, included an attribute change configuration.  Each attribute has an initial entry of C<(0, value)>, either the default or the value specified in the declaration.
+The reported C<xy> is an array of values of the form C<(tm, value, average)>, with each timestamped entry indicating that a scheduling activity, action, or message, included an attribute change configuration.  Each attribute has an initial entry of C<(0, value)>, either the default or the value specified in the declaration.  Note that the starting time may be a value other than zero.
 
 Any attribute may be "fixed" in the log at its current value by passing the change as C<{}>, which is equivalent to C<incr=0> for integers.  (Internally this may also be invoked with C<_log=1>, but this is subject to change.)
 
