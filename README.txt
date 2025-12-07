@@ -6,9 +6,9 @@ This package provides a mechanism to construct "random" schedules of events usin
 
 What's new in version 0.2.5:
 ----------------------------
-	- NodeFilter supports average values
-	- Attribute cleanup, averages always defined
-	- Attribute report includes averages
+* NodeFilter supports average values
+* Attribute cleanup, averages always defined
+* Attribute report includes averages
 
 What's new in recent versions:
 ------------------------------
