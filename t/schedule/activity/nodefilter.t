@@ -3,7 +3,13 @@
 use strict;
 use warnings;
 use Schedule::Activity::NodeFilter;
-use Test::More tests=>5;
+use Test::More tests=>7;
+
+subtest 'Init'=>sub {
+	plan tests=>1;
+	eval { Schedule::Activity::NodeFilter->new(f=>'unsupported') };
+	like($@,qr/(?i:invalid filter)/,'Invalid filter');
+};
 
 subtest 'Values'=>sub {
 	plan tests=>12;
@@ -35,7 +41,7 @@ sub matches { die 'This should not be called' }
 package main;
 
 subtest 'Boolean and'=>sub {
-	plan tests=>4;
+	plan tests=>5;
 	my $filter=Schedule::Activity::NodeFilter->new(f=>'boolean',boolean=>'and');
 	my %attributes=(x=>{value=>7},y=>{value=>8});
 	my $with=sub {
@@ -51,10 +57,14 @@ subtest 'Boolean and'=>sub {
 		{attr=>'y',op=>'eq',value=>8},
 		{attr=>'x',op=>'lt',value=>9},
 		]),'(x=7)&&(y=8)&&(x<9)');
+	ok( &$with(filters=>[
+		Schedule::Activity::NodeFilter->new(f=>'value',attr=>'x',op=>'eq',value=>7),
+		Schedule::Activity::NodeFilter->new(f=>'value',attr=>'y',op=>'eq',value=>8),
+		]),'object (x=7)&&(y=8)');
 };
 
 subtest 'Boolean or'=>sub {
-	plan tests=>4;
+	plan tests=>6;
 	my $filter=Schedule::Activity::NodeFilter->new(f=>'boolean',boolean=>'or');
 	my %attributes=(x=>{value=>7},y=>{value=>8});
 	my $with=sub {
@@ -70,10 +80,15 @@ subtest 'Boolean or'=>sub {
 		{attr=>'y',op=>'eq',value=>1},
 		{attr=>'x',op=>'lt',value=>9},
 		]),'(x=7)||(y=8)||(x<9)');
+	ok(!&$with(filters=>[{attr=>'x',op=>'eq',value=>6},{attr=>'y',op=>'eq',value=>7}]),'(x=6)||(y=7)');
+	ok( &$with(filters=>[
+		Schedule::Activity::NodeFilter->new(f=>'value',attr=>'x',op=>'eq',value=>7),
+		Schedule::Activity::NodeFilter->new(f=>'value',attr=>'y',op=>'eq',value=>8),
+		]),'object (x=7)||(y=8)');
 };
 
 subtest 'Boolean nand'=>sub {
-	plan tests=>5;
+	plan tests=>6;
 	my $filter=Schedule::Activity::NodeFilter->new(f=>'boolean',boolean=>'nand');
 	my %attributes=(x=>{value=>7},y=>{value=>8});
 	my $with=sub {
@@ -90,6 +105,17 @@ subtest 'Boolean nand'=>sub {
 		{attr=>'y',op=>'eq',value=>8},
 		{attr=>'x',op=>'gt',value=>9},
 		]),'(x=7)||(y=8)||(x>9)');
+	ok(!&$with(filters=>[
+		Schedule::Activity::NodeFilter->new(f=>'value',attr=>'x',op=>'eq',value=>7),
+		Schedule::Activity::NodeFilter->new(f=>'value',attr=>'y',op=>'eq',value=>8),
+		]),'object (x=7) !&& (y=8)');
+};
+
+subtest 'Boolean unsupported'=>sub {
+	plan tests=>1;
+	my $filter=Schedule::Activity::NodeFilter->new(f=>'boolean',boolean=>'unsupported',filters=>[]);
+	my %attributes=(x=>{value=>7},y=>{value=>8});
+	ok(!$filter->matches(undef,%attributes),'Default does not match');
 };
 
 subtest 'Elapsed time'=>sub {
