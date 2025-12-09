@@ -70,6 +70,9 @@ sub materialize {
 	foreach my $entry (@materialized) { print join(' ',@$entry),"\n" }
 }
 
+# At this time these are redundant.  Plan is to move these into a support
+# module so they can be better tested, reduce redundancy, and reduce
+# clutter in the script.
 sub attrgrid {
 	my (%schedule)=@_;
 	my $tmmax=$schedule{_tmmax};
@@ -92,6 +95,13 @@ sub attrgrid {
 		}
 		print sprintf('%0.4g',$schedule{attributes}{$name}{avg}//0),"\t$name\n";
 	}
+}
+
+sub attraverage {
+	my (%schedule)=@_;
+	print "\n";
+	print "Avg\tAttribute\n";
+	foreach my $name (sort keys %{$schedule{attributes}}) { print sprintf('%0.4g',$schedule{attributes}{$name}{avg}//0),"\t$name\n" }
 }
 
 my %opt=(
@@ -190,7 +200,8 @@ if($opt{notemerge}) {
 
 materialize(%schedule);
 
-if($opt{attribute} eq 'grid') { attrgrid(%schedule) }
+if($opt{attribute} eq 'grid')    { attrgrid(%schedule) }
+if($opt{attribute} eq 'average') { attraverage(%schedule) }
 
 __END__
 
