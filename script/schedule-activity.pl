@@ -97,6 +97,30 @@ sub attrgrid {
 	}
 }
 
+sub attravggrid {
+	my (%schedule)=@_;
+	my $tmmax=$schedule{_tmmax};
+	my $tmstep=int(0.5+$tmmax/10);
+	print "\n";
+	for(my $tm=0;$tm<=$tmmax;$tm+=$tmstep) { print "$tm\t" }; print "avg\tAttribute\n";
+	foreach my $name (sort keys %{$schedule{attributes}}) {
+		my $attr=$schedule{attributes}{$name}{xy};
+		my ($i,$y)=(-1);
+		for(my $tm=0;$tm<=$tmmax;$tm+=$tmstep) {
+			while(($i<$#$attr)&&($tm>=$$attr[$i+1][0])) { $i++ }
+			if($i<0)           { $y=0 }
+			elsif($i>=$#$attr) { $y=$$attr[$i][2] }
+			elsif($i==0)       { $y=$$attr[0][2] }
+			else {
+				my $p=($tm-$$attr[$i][0])/($$attr[$i+1][0]-$$attr[$i][0]);
+				$y=(1-$p)*$$attr[$i][2]+$p*$$attr[$i+1][2];
+			}
+			print sprintf("%0.4g\t",$y);
+		}
+		print sprintf('%0.4g',$schedule{attributes}{$name}{avg}//0),"\t$name\n";
+	}
+}
+
 sub attraverage {
 	my (%schedule)=@_;
 	print "\n";
@@ -200,8 +224,9 @@ if($opt{notemerge}) {
 
 materialize(%schedule);
 
-if($opt{attribute} eq 'grid')    { attrgrid(%schedule) }
-if($opt{attribute} eq 'average') { attraverage(%schedule) }
+if($opt{attribute}=~/\bgrid\b/)    { attrgrid(%schedule) }
+if($opt{attribute}=~/\baverage\b/) { attraverage(%schedule) }
+if($opt{attribute}=~/\bavggrid\b/) { attravggrid(%schedule) }
 
 __END__
 
@@ -238,9 +263,9 @@ Only merge the annotation groups specified by the names.  Default is all, alphab
 
 Do not merge annotation messages into the final schedule.
 
-=head2 --attribute=grid
+=head2 --attribute=grid,average,avggrid
 
-Display all attributes, their values over time, and averages.  (No other output formats are supported at this time)
+Comma-separated, one or more:  'grid' shows values over time and overall average.  'average' shows only overall averages.  'avggrid' shows averages over time.
 
 =head2 --goal=(hash)
 
