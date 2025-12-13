@@ -6,7 +6,7 @@ use Ref::Util qw/is_plain_hashref/;
 
 our $VERSION='0.2.5';
 
-my %property=map {$_=>undef} qw/f attr op value boolean filters/;
+my %property=map {$_=>undef} qw/f attr op value boolean filters mod/;
 my %matcher=(
 	boolean=>\&matchBoolean,
 	elapsed=>\&matchElapsed,
@@ -82,6 +82,10 @@ sub matchValue {
 	else { die "Not yet available $$self{f}" }
 	if(defined($$self{value})) {
 		if(!defined($v)) { return 0 }
+		if(defined($$self{mod})) {
+			if($v<0) { $v+=(1+int(-$v/$$self{mod}))*$$self{mod} }
+			$v=$v-int($v/$$self{mod})*$$self{mod};
+		}
 		if($$self{op} eq 'eq') { return $v==$$self{value} }
 		if($$self{op} eq 'ne') { return $v!=$$self{value} }
 		if($$self{op} eq 'lt') { return $v< $$self{value} }
@@ -130,8 +134,13 @@ A filter that directly checks attribute values as C<attribute op value> can be c
   attr =>'name',
   op   =>'lt/gt/le/ge/eq/ne',
   value=>number,
+  mod  =>number, # optional
 
 It is not necessary to pass C<f=value>, which is the default.  If the attribute value is undefined, the match is false.  All other operators are I<numeric> and are self explanatory.  (This might change, but currently there is no proposal/use case to support setting attributes with string values.)
+
+The C<mod> is an optional I<floating-point> modulus value.  Due to potential accumulation and rounding errors, inequality comparisons are recommend, such as C<op=E<gt>'lt', value=E<lt>1>.  The floating modulus works for integer and real-valued attributes, as well as negative numbers, with the value of C<x> modulo C<m> for positive C<x> defined as:
+
+  x-m*int(x/m)
 
 =head2 Attribute averages
 

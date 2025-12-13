@@ -3,7 +3,7 @@
 use strict;
 use warnings;
 use Schedule::Activity::NodeFilter;
-use Test::More tests=>7;
+use Test::More tests=>8;
 
 subtest 'Init'=>sub {
 	plan tests=>1;
@@ -34,6 +34,28 @@ subtest 'Values'=>sub {
 	ok( &$with(op=>'le'),'le');
 	ok(!&$with(op=>'gt'),'gt');
 	ok(!&$with(op=>'ge'),'ge');
+};
+
+subtest 'Value modulus'=>sub {
+	plan tests=>2;
+	my $filter=Schedule::Activity::NodeFilter->new(f=>'value',attr=>'name',op=>'lt',value=>1,mod=>3);
+	my %attributes=(name=>{value=>0});
+	my @matched;
+	foreach my $i (-5..20) {
+		$attributes{name}{value}=$i;
+		if($filter->matches(undef,%attributes)) { push @matched,$i }
+	}
+	is_deeply(\@matched,[map {3*$_} (-1..6)],'Every third integer');
+	#
+	@matched=(); # overload as failures
+	for(my $x=0;$x<3;$x+=0.01) {
+		foreach my $M (-1..2) {
+			$attributes{name}{value}=3*$M+$x;
+			my $res=$filter->matches(undef,%attributes);
+			if($res&&($x>=1)) { push @matched,"$M,$x,$attributes{name}{value}" }
+		}
+	}
+	is_deeply(\@matched,[],'Floating modulus');
 };
 
 package DieFilter;
