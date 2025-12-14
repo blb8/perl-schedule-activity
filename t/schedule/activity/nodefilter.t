@@ -3,7 +3,7 @@
 use strict;
 use warnings;
 use Schedule::Activity::NodeFilter;
-use Test::More tests=>8;
+use Test::More tests=>9;
 
 subtest 'Init'=>sub {
 	plan tests=>1;
@@ -153,5 +153,14 @@ subtest 'Elapsed time'=>sub {
 	ok( &$with(10,op=>'le'),'elapsed le 7');
 	ok(!&$with(12,op=>'gt'),'elapsed gt 7');
 	ok( &$with(13,op=>'gt'),'elapsed gt 7 b');
+};
+
+subtest 'Elapsed modulus'=>sub {
+	plan tests=>1;
+	my $filter=Schedule::Activity::NodeFilter->new(f=>'elapsed',attr=>'x',op=>'lt',value=>3,mod=>6);
+	my %attributes=(x=>{value=>0,tmmax=>3});
+	my @matched;
+	foreach my $tm (-10..20) { if($filter->matches($tm,%attributes)) { push @matched,$tm } }
+	is_deeply(\@matched,[3,4,5,9,10,11,15,16,17],'First half of every 6unit window');
 };
 

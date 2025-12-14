@@ -65,10 +65,10 @@ sub matchElapsed {
 	my ($self,$tm,%attributes)=@_;
 	my $v=$attributes{$$self{attr}}//{};
 	$v=$$v{tmmax};
-	if(defined($v)) {
+	if(defined($v)&&($tm>=$v)) {
 		$v=$tm-$v;
 		return __PACKAGE__
-			->new(f=>'value',attr=>'timecheck',op=>$$self{op},value=>$$self{value})
+			->new(f=>'value',attr=>'timecheck',op=>$$self{op},value=>$$self{value},mod=>$$self{mod})
 			->matches(undef,timecheck=>{value=>$v});
 	}
 	return 0;
@@ -161,8 +161,9 @@ To control "time between actions", a filter can be used to check the elapsed tim
   attr =>'name',
   op   =>'operator'
   value=>seconds,
+  mod  =>number, # optional
 
-For any attribute, the most recent recorded event is used as the attribute time.  To record a timestamp for an integer attribute without changing its value, use C<incr=0>.
+For any attribute, the most recent recorded event is used as the attribute time.  To record a timestamp for an integer attribute without changing its value, use C<incr=0>.  For C<mod>, see L</"Attribute values"> above.  Negative times never match this filter.
 
 =head1 BOOLEAN EXPRESSIONS
 
