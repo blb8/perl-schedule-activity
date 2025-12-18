@@ -21,12 +21,14 @@ sub register {
 	my @errors;
 	if(defined($$self{attr}{$attribute})) {
 		if($opt{type}&&($$self{attr}{$attribute}{type} ne $opt{type})) {
-			push @errors,"Attribute conflicting types:  $attribute" } }
-	else {
-		eval { $$self{attr}{$attribute}=Schedule::Activity::Attribute->new(%opt); };
-		if($@) { push @errors,$@ }
+			push @errors,"Attribute conflicting types:  $attribute" }
+		return @errors;
 	}
-	push @errors,$$self{attr}{$attribute}->validateConfig(%opt);
+	eval {
+		$$self{attr}{$attribute}=Schedule::Activity::Attribute->new(%opt);
+		push @errors,$$self{attr}{$attribute}->validateConfig(%opt);
+	};
+	if($@) { push @errors,$@ }
 	return @errors;
 }
 
