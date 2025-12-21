@@ -161,7 +161,11 @@ if(!@{$opt{activity}}&&!$opt{after}) { die 'Activities are required' }
 for(my $i=0;$i<=$#{$opt{activity}};$i++) { $opt{activity}[$i]=[split(/,/,$opt{activity}[$i],2)] }
 
 my %schedule=$scheduler->schedule(goal=>\%goal,%after,activities=>$opt{activity},tensionslack=>$opt{tslack},tensionbuffer=>$opt{tbuffer});
-if($schedule{error}) { print STDERR join("\n",@{$schedule{error}}),"\n"; exit(1) }
+if($schedule{error}) {
+	if(!ref($schedule{error})) { $schedule{error}=[$schedule{error}] }
+	print STDERR join("\n",@{$schedule{error}}),"\n";
+	exit(1);
+}
 
 # Workaround.  Until other options are available, annotations canNOT be
 # materialized into the activity schedule.  Such nodes are unexpected

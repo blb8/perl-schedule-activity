@@ -342,6 +342,16 @@ sub scheduler {
 sub goalScheduling {
 	my ($self,%opt)=@_;
 	my %goal=%{delete($opt{goal})};
+	$goal{attribute}//={};
+	if(!is_hashref($goal{attribute})) { return (error=>'goal{attribute} must be hash') }
+	{ my $attr=$self->_attr();
+		foreach my $k (keys %{$goal{attribute}}) {
+			if(!defined($$attr{attr}{$k})) { return (error=>"goal-requested attribute does not exist:  $k") }
+			if(!defined($goal{attribute}{$k}{op})) { return (error=>"missing operator in goal $k") }
+			if(($goal{attribute}{$k}{op}//'')!~/^(?:max|min|eq|ne)$/) { return (error=>"invalid operator in goal $k") }
+			if(($goal{attribute}{$k}{op}=~/^(?:eq|ne)$/)&&!defined($goal{attribute}{$k}{value})) { return (error=>"missing value in goal $k") }
+		}
+	}
 	my $cycles=$goal{cycles}//10;
 	my %schedule;
 	eval { %schedule=$self->schedule(%opt) };
@@ -712,7 +722,7 @@ The scheduling configuration may also declare attribute names and starting value
     },
   )
 
-Boolean types must be declared in this section.  It is recommended to set any non-zero initial values in this fashion, since calling C<set> requires that activity to always be the first requested in the schedule.  
+Boolean types must be declared in this section.  It is recommended to set any non-zero initial values in this fashion, since calling C<set> requires that activity to always be the first requested in the schedule.
 
 Attributes within message alternate configurations and named messages are identified during configuration validation.  Together with activity/action configurations, attributes are verified before schedule construction, which will fail if an attribute name is referenced in a conflicting manner.
 
@@ -821,7 +831,7 @@ Attributes may be used for filtering during schedule construction.  When schedul
 
 Node filtering applies to the last recorded attributes, independent of any actions a candidate node may take on attributes.  Attribute averages values are updated to the "random current time", as if the attribute value was fixed between the last recorded entry and the random current time, prior to node filtering comparisons.
 
-After any filtering and random selection, each activity/action node will update attributes, after which any materialized message will update attributes.  
+After any filtering and random selection, each activity/action node will update attributes, after which any materialized message will update attributes.
 
 After reaching the target time for an activity, event times are updated based on the total slack/buffer time available.  The actual attribute history is constructed from those adjusted times, and will be visible to the next activity scheduled.  Filtering is evaluated as a I<single pass> only, so average values visible during filtering may be slightly different than averages after slack/buffer adjustments.
 
