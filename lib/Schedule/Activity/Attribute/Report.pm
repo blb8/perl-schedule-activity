@@ -50,7 +50,7 @@ sub summaryreport {
 	my @res;
 	if($opt{header}) { push @res,[$opt{values} eq 'avg'?'Average':'Value']; if($opt{names}) { push @{$res[-1]},'Attribute' } }
 	foreach my $name (sort keys %{$$self{attributes}}) {
-		push @res,[$$self{attributes}{$name}{xy}[-1][$yidx]];
+		push @res,[sprintf($opt{fmt},$$self{attributes}{$name}{xy}[-1][$yidx])];
 		if($opt{names}) { push @{$res[-1]},$name }
 	}
 	return @res;
