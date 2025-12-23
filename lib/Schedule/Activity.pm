@@ -342,7 +342,6 @@ sub scheduler {
 sub goalScheduling {
 	my ($self,%opt)=@_;
 	my %goal=%{delete($opt{goal})};
-	$goal{attribute}//={};
 	if(!is_hashref($goal{attribute})) { return (error=>'goal{attribute} must be hash') }
 	{ my $attr=$self->_attr();
 		foreach my $k (keys %{$goal{attribute}}) {
@@ -410,12 +409,34 @@ sub goalScheduling {
 	return %best;
 }
 
+sub incrementalScheduling {
+	my ($self,%opt)=@_;
+	my $activities=$opt{activities};
+	my $i=0;
+	my %after=();
+	my %schedule;
+	while($i<=$#$activities) {
+		my $j=$i;
+		while(($j<$#$activities)&&(!is_hashref($$activities[$j][2])||!defined($$activities[$j][2]{goal}))) { $j++ }
+		my @acts;
+		foreach my $activity (@$activities[$i..$j]) {
+			push @acts,[@$activity[0,1]];
+			if(is_hashref($$activity[2])) { push @{$acts[-1]},{map {$_=>$$activity[2]{$_}} grep {$_ ne 'goal'} keys(%{$$activity[2]})} }
+		}
+		%schedule=$self->schedule(%opt,%after,activities=>\@acts,goal=>$$activities[$j][2]{goal});
+		if($i<$#$activities) { %after=(after=>{%schedule}) }
+		$i=1+$j;
+	}
+	return %schedule;
+}
+
 sub schedule {
 	my ($self,%opt)=@_;
 	my %check=$self->compile(unsafe=>$opt{unsafe}//$$self{unsafe});
 	if($check{error})                  { return (error=>$check{error}) }
 	if(!is_arrayref($opt{activities})) { return (error=>'Activities must be an array') }
-	if($opt{goal}&&%{$opt{goal}}) { return $self->goalScheduling(%opt) }
+	if(grep {is_hashref($$_[2])&&defined($$_[2]{goal})} @{$opt{activities}}) { return $self->incrementalScheduling(%opt) }
+	if($opt{goal}&&%{$opt{goal}})      { return $self->goalScheduling(%opt) }
 	my $tmoffset=$opt{tmoffset}//0;
 	my %res=(stat=>{slack=>0,buffer=>0});
 	if($opt{after}) {
