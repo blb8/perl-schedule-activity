@@ -867,11 +867,11 @@ For longer schedules with multiple activities, regenerating a full schedule beca
 Incremental schedules can be built using the C<after> and C<nonote> options:
 
   # Use nonote to avoid annotation build at this time
-  my $choiceA=$scheduler->schedule(nonote=>1, activities=>[[600,'activity1']);
-  my $choiceB=$scheduler->schedule(nonote=>1, activities=>[[600,'activity1']);
+  my %choiceA=$scheduler->schedule(nonote=>1, activities=>[[600,'activity1']]);
+  my %choiceB=$scheduler->schedule(nonote=>1, activities=>[[600,'activity1']]);
   #
   # two or more choices are reviewed and one is selected
-  my %res=$scheduler->schedule(after=>$choiceB, activities=>[[600,'activity2']);
+  my %res=$scheduler->schedule(after=>\%choiceB, activities=>[[600,'activity2']]);
 
 The schedule indicated via C<after> signals that the scheduler should build the activities and extend the schedule.  Attributes are automatically loaded from the earlier part of the schedule and affect node filtering normally.
 
@@ -900,6 +900,39 @@ Goal seeking retries schedule construction and finds the best, I<random> schedul
 One or more attributes may be included in the goal, and each of the C<cycles> (default 10) schedules will be scored based on the configured conditions.  The C<max> and C<min> operators seek the largest/smallest attribute I<average value> for the schedule.  The C<eq> and C<ne> operators score near/far from the provided C<value>.  Note that generated schedules may have a different number of activities, so some attribute goals may be equivalent to finding the shortest/longest action counts.
 
 Goal scheduling is experimental starting with 0.2.4.  Attributes currently have equal weighting and scores are linear.  If no schedule can be generated, the most recent error will raise via C<die()>.  Goals can be different during different invocations of incremental construction.
+
+=head2 Per-Activity Goals
+
+Scheduling goals may be specified per activity when calling C<schedule>:
+
+  my %schedule=$scheduler->schedule(activities=>[
+    [30,'Activity A'],
+    [30,'Activity B',{goal=>{cycles=>N,attribute=>{...}}],
+    [30,'Activity C'],
+    ...,
+  ]);
+
+Per-activity goals apply to all immediately-preceding activities following the previous goal.  In the above example, Activities A and B will be constructed I<together>, with the overall goal as specified in Activity B.  Then, scheduling will proceed to the chain starting with C, until it encounters another activity with a goal configuration, if any.  This mirrors the behavior of incremental construction:
+
+  my %scheduleAB =$scheduler->schedule(
+    activities=>[[30,'Activity A'],[30,'Activity B']],
+    goal      =>{...});
+  my %scheduleABC=$scheduler->schedule(
+    activities=>[[30,'Activity C']],
+    after     =>\%scheduleAB,
+    goal      =>undef);
+
+When per-activity scheduling is active, any goals specified in the call to C<schedule(goal=>{...})> are unused.  Only activities with (or preceding) a goal will be scheduled with goals.  Any activities after the last specified goal will not perform goal seeking.  Placing a per-activity goal in only the final activity is therefore equivalent to a schedule-wide goal:
+
+  my %schedule=$scheduler->schedule(
+    activities=>[[10,'A'],[10,'B'],...,[10,'Z',{goal=>{GOAL}}]]);
+  my %schedule=$scheduler->schedule(
+    activities=>[[10,'A'],[10,'B'],...,[10,'Z']],
+    goal=>{GOAL});
+
+Goal scheduling for an activity may be skipped with the goal C<{cycles=E<gt>1,attribute=E<gt>{}}>, or by calling incremental construction with goals only for the desired activities.
+
+Per-activity goal scheduling is experimental starting with 0.2.7.
 
 =head1 IMPORT MECHANISMS
 

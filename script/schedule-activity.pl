@@ -237,7 +237,7 @@ Comma-separated, one or more:  'grid' shows values over time and overall average
 
 =head2 --goal=(hash)
 
-Provide a Perl hash string of the form C<'cycles=E<gt>N,attribute=E<gt>{...}'> as described in L<Schedule::Activity/Goals> to enable attribute-based goal seeking.
+Provide a Perl hash string of the form C<'cycles=E<gt>N,attribute=E<gt>{...}'> as described in L<Schedule::Activity/Goals> to enable attribute-based goal seeking.  Run with C<--man> for details on per-activity goals.
 
 =head2 --unsafe
 
@@ -262,6 +262,10 @@ This permits buliding multiple, randomized schedules from the configuration into
 At each step, the schedule is output normally, including annotations unless C<nonotemerge> has been specified.
 
 Annotations are I<not> saved.  Annotations apply generally to all actions in a schedule, so incremental builds are not equivalent to a full schedule build.  While the annotations are shown with the output at each stage of construction, they are recomputed each time.
+
+=head1 PER-ACTIVITY GOALS
+
+Per-activity goals are not yet supported directly from the commandline, but can be achieved using incremental construction.  See L<Schedule::Activity/"Per-Activity Goals">.
 
 =head1 NOTES
 
