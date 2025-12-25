@@ -761,7 +761,9 @@ When an activity/action node and a selected message both contain attributes, the
 
 Attributes are always logged at the beginning and end of the completed schedule, so that all scheduled time affects the weighted average value calculation.  Activities may reset or fix attributes as needed in their beginning or final node; note that the final node is only the "end of the activity" when C<tmavg=0>.
 
-=head2 Recomputation
+=head2 Reporting
+
+The scheduling response contains a raw report of the C<schedule{attributes}> as defined in L<Schedule::Activity::Attribute/RESPONSE>.  The report can be reformatted as described in L<Schedule::Activity::Attribute::Report>.
 
 Any schedule of activities associated with the initial configuration can generate a standalone attribute report:
 
@@ -856,7 +858,7 @@ After any filtering and random selection, each activity/action node will update 
 
 After reaching the target time for an activity, event times are updated based on the total slack/buffer time available.  The actual attribute history is constructed from those adjusted times, and will be visible to the next activity scheduled.  Filtering is evaluated as a I<single pass> only, so average values visible during filtering may be slightly different than averages after slack/buffer adjustments.
 
-Annotations are computed separately by groups.  Attributes arising from merged annotations do not affect attributes retroactively (nor, obviously, any node filtering).  See L</Recomputation>.
+Annotations are computed separately by groups.  Attributes arising from merged annotations do not affect attributes retroactively (nor, obviously, any node filtering).  See L</Reporting>.
 
 Scheduling proceeds stepwise, and "consistency" is defined as adherence to the computed values I<at that time>.  No recomputation occurs, except through full retries (such as goal seeking).  All of the following can create paradoxes that are avoided with this approach:  Slack/buffer adjustments can alter attribute average values leading to different node filtering/selection.  Slack/buffer adjustments can produce times that open other action branches that may have be unavailable during scheduling.  Annotations that are merged may adjust attributes such that the nodes they are annotating would disappear.  Nodes may adjust attributes such that the final node is unreachable.
 
