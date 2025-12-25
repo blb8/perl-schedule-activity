@@ -160,7 +160,7 @@ if($opt{activities}) { foreach my $pair (split(/;/,$opt{activities})) { push @{$
 if(!@{$opt{activity}}&&!$opt{after}) { die 'Activities are required' }
 for(my $i=0;$i<=$#{$opt{activity}};$i++) { $opt{activity}[$i]=[split(/,/,$opt{activity}[$i],2)] }
 
-my %schedule=$scheduler->schedule(goal=>\%goal,%after,activities=>$opt{activity},tensionslack=>$opt{tslack},tensionbuffer=>$opt{tbuffer});
+my %schedule=$scheduler->schedule(goal=>\%goal,%after,activities=>$opt{activity},tensionslack=>$opt{tslack},tensionbuffer=>$opt{tbuffer},nonote=>!$opt{notemerge});
 if($schedule{error}) {
 	if(!ref($schedule{error})) { $schedule{error}=[$schedule{error}] }
 	print STDERR join("\n",@{$schedule{error}}),"\n";
