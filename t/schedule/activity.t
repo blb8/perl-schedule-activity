@@ -1001,7 +1001,10 @@ subtest 'Per-activity goals'=>sub {
 		my $cycles=int(20+rand(100));
 		$steps+=$cycles;
 		my $scheduler=Schedule::Activity->new(configuration=>\%config);
-		my %schedule=$scheduler->schedule(activities=>[[5,'actA'],[5,'actB',{goal=>{cycles=>$cycles,attribute=>{attrA=>{op=>'max'},attrB=>{op=>'max'}}}}],[20,'actC']],tensionslack=>1,tensionbuffer=>1);
+		my %schedule=$scheduler->schedule(
+			activities=>[[5,'actA'],[5,'actB',{goal=>{cycles=>$cycles,attribute=>{attrA=>{op=>'max'},attrB=>{op=>'max'}}}}],[20,'actC']],
+			goal=>{cycles=>100,attribute=>{attrA=>{op=>"min"},attrB=>{op=>"min"},attrC=>{op=>"min"}}}, # this goal is never used with per-activity goals
+			tensionslack=>1,tensionbuffer=>1);
 		if(1+$#{$schedule{activities}}!=36) { next }
 		if(($schedule{attributes}{attrA}{y}>=5)&&($schedule{attributes}{attrB}{y}>=5)&&($schedule{attributes}{attrC}{avg}!=0)) { $pass=1; $maxouter=$steps }
 	}
