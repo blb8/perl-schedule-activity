@@ -271,7 +271,8 @@ sub findpath {
 
 sub scheduler {
 	my (%opt)=@_; # goal,node,config
-	if(!is_hashref($opt{node})) { die 'scheduler called with invalid node' }
+	if(!is_hashref($opt{node}))      { die 'scheduler called with invalid node' }
+	if(!defined($opt{node}{finish})) { die 'scheduler called with non-activity node' }
 	$opt{retries}//=10; $opt{retries}--;
 	if($opt{retries}<0) { die $opt{error}//'scheduling retries exhausted' }
 	#

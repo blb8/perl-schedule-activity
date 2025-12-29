@@ -133,16 +133,13 @@ if($opt{man})  { pod2usage(-verbose=>2,-exitval=>2) }
 if($opt{help}) { pod2usage(-verbose=>1,-exitval=>2) }
 
 my (%configuration,%after,%goal);
-if($opt{after}) {
-	%after=loadafter($opt{after});
-	%configuration=%{$after{configuration}};
-	%after=(after=>$after{schedule});
-}
-else { %configuration=
-	$opt{schedule} ? loadeval($opt{schedule}) :
-	$opt{json}     ? loadjson($opt{json}) :
+%after=$opt{after}? loadafter($opt{after}):();
+%configuration=
+	$opt{schedule}  ? loadeval($opt{schedule}) :
+	$opt{json}      ? loadjson($opt{json}) :
+	$opt{after}     ? %{$after{configuration}} :
 	die 'Configuration is required';
-}
+%after=$opt{after}?(after=>$after{schedule}):();
 
 my $scheduler=Schedule::Activity->new(unsafe=>$opt{unsafe},configuration=>\%configuration);
 my %check=$scheduler->compile();
@@ -255,13 +252,13 @@ Schedules can be incrementally constructed from a starting configuration as foll
   schedule-activity.pl --after=file1a.dat --activity=time,name --save=file2a.dat
   schedule-activity.pl --after=file2a.dat --nonotemerge
 
-The C<schedule> must be provided initially, and the C<activity> or C<activities> will be built into the list of scheduled activities normally.  Results are stored in the C<save> filename.  Use C<after> to specify a savefile as a starting point for scheduling.  As a special case, omitting an C<activity> list is permitted with an C<after> file, and the saved schedule will be shown on stdout.  The configuration does not need to be indicated after the bootstrapping step.
+The C<schedule> must be provided initially, and the C<activity> or C<activities> will be built into the list of scheduled activities normally.  Results are stored in the C<save> filename.  Use C<after> to specify a savefile as a starting point for scheduling.  As a special case, omitting an C<activity> list is permitted with an C<after> file, and the saved schedule will be shown on stdout.  The configuration does not need to be provided after the bootstrapping step.
+
+Providing C<schedule> on a subsequent run will fully overwrite the saved configuration.  Existing scheduling results will be unaffected (but see below regarding annotations).  (This is experimental starting with 0.2.8)
 
 This permits buliding multiple, randomized schedules from the configuration into separate files for comparison and selection.  Subsequent activities can be built incrementally to achieve targets not specified within the configuration (attribute goals, etc.).
 
-At each step, the schedule is output normally, including annotations unless C<nonotemerge> has been specified.
-
-Annotations are I<not> saved.  Annotations apply generally to all actions in a schedule, so incremental builds are not equivalent to a full schedule build.  While the annotations are shown with the output at each stage of construction, they are recomputed each time.
+At each step, the schedule is output normally, including annotations unless C<nonotemerge> has been specified.  Annotations are I<not> saved.  Annotations apply generally to all actions in a schedule, so incremental builds are not equivalent to a full schedule build.  While the annotations are shown with the output at each stage of construction, they are recomputed each time.
 
 =head1 PER-ACTIVITY GOALS
 
