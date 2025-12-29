@@ -155,7 +155,15 @@ if($opt{goal}) {
 
 if($opt{activities}) { foreach my $pair (split(/;/,$opt{activities})) { push @{$opt{activity}},$pair } }
 if(!@{$opt{activity}}&&!$opt{after}) { die 'Activities are required' }
-for(my $i=0;$i<=$#{$opt{activity}};$i++) { $opt{activity}[$i]=[split(/,/,$opt{activity}[$i],2)] }
+for(my $i=0;$i<=$#{$opt{activity}};$i++) {
+	$opt{activity}[$i]=[split(/,/,$opt{activity}[$i],3)];
+	if($opt{activity}[$i][2]) {
+		my $href;
+		eval "\$href=$opt{activity}[$i][2];";
+		if($@) { die "Goal format failure:  $@" }
+		$opt{activity}[$i][2]=$href;
+	}
+}
 
 my %schedule=$scheduler->schedule(goal=>\%goal,%after,activities=>$opt{activity},tensionslack=>$opt{tslack},tensionbuffer=>$opt{tbuffer},nonote=>!$opt{notemerge});
 if($schedule{error}) {
@@ -208,7 +216,7 @@ schedule-activity.pl - Build activity schedules.
     configuration:  [--schedule=file | --json=file]
     activities:     [--activity=time,name ... | --activities='time,name;time,name;...']
 
-The C<--schedule> file should be a non-cyclic Perl evaluable hash or hash reference.  A C<--json> file should be a hash reference.  The format of the schedule configuration is described in L<Schedule::Activity>.
+The C<--schedule> file should be a non-cyclic Perl evaluable hash or hash reference.  A C<--json> file should be a hash reference.  Activity names may not contain commas or semicolons if used from the commandline.  The format of the schedule configuration is described in L<Schedule::Activity>.
 
 =head1 OPTIONS
 
@@ -262,7 +270,13 @@ At each step, the schedule is output normally, including annotations unless C<no
 
 =head1 PER-ACTIVITY GOALS
 
-Per-activity goals are not yet supported directly from the commandline, but can be achieved using incremental construction.  See L<Schedule::Activity/"Per-Activity Goals">.
+Per-activity goals are supported in both C<activity> and C<activities> options:
+
+  ... --activity='100,activity A,{goal=>{cycles=>100,attribute=>{...}}}' --activity='100,activity B,{goal=>{cycles=>100,attribute=>{...}}}'
+  or
+  ... --activities='100,activity A,{goal=>{cycles=>100,attribute=>{...}}};100,activity B,{goal=>{cycles=>100,attribute=>{...}}}'
+
+See L<Schedule::Activity/"Per-Activity Goals"> for additional details.
 
 =head1 NOTES
 
