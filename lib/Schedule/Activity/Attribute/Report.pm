@@ -22,7 +22,7 @@ sub gridreport {
 	my $tmstep=($tmmax-$tmmin)/$opt{steps};
 	my @times=map {$tmmin+$tmstep*$_} (0..$opt{steps});
 	my @res;
-	if($opt{header}) { push @res,[@times]; if($opt{names}) { push @{$res[-1]},'Attribute' } }
+	if($opt{header}) { push @res,[map {sprintf($opt{fmt},$_)} @times]; if($opt{names}) { push @{$res[-1]},'Attribute' } }
 	foreach my $name (sort keys %{$$self{attributes}}) {
 		my @row;
 		my $attr=$$self{attributes}{$name}{xy};
