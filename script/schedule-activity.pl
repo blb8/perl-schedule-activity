@@ -71,6 +71,12 @@ sub materialize {
 	foreach my $entry (@materialized) { print join(' ',@$entry),"\n" }
 }
 
+sub attrvalue {
+	my (%schedule)=@_;
+	print "\n";
+	my $reporter=Schedule::Activity::Attribute::Report->new(%schedule);
+	print $reporter->report(type=>'summary',values=>'y',header=>1,names=>1,fmt=>'%0.4g',sep=>"\t",format=>'text')."\n";
+}
 sub attrgrid {
 	my (%schedule)=@_;
 	print "\n";
@@ -78,18 +84,18 @@ sub attrgrid {
 	my @rhs=@{$reporter->report(type=>'summary',values=>'avg',header=>1,names=>1,fmt=>'%0.4g',format=>'table')//[]};
 	foreach my $row (@{$reporter->report(type=>'grid',values=>'y',header=>1,names=>0,fmt=>'%0.4g',format=>'table')//[]}) { print join("\t",@$row,@{shift(@rhs)//[]}),"\n" }
 }
+sub attraverage {
+	my (%schedule)=@_;
+	print "\n";
+	my $reporter=Schedule::Activity::Attribute::Report->new(%schedule);
+	print $reporter->report(type=>'summary',values=>'avg',header=>1,names=>1,fmt=>'%0.4g',sep=>"\t",format=>'text')."\n";
+}
 sub attravggrid {
 	my (%schedule)=@_;
 	print "\n";
 	my $reporter=Schedule::Activity::Attribute::Report->new(%schedule);
 	my @rhs=@{$reporter->report(type=>'summary',values=>'avg',header=>1,names=>1,fmt=>'%0.4g',format=>'table')//[]};
 	foreach my $row (@{$reporter->report(type=>'grid',values=>'avg',header=>1,names=>0,fmt=>'%0.4g',format=>'table')//[]}) { print join("\t",@$row,@{shift(@rhs)//[]}),"\n" }
-}
-sub attraverage {
-	my (%schedule)=@_;
-	print "\n";
-	my $reporter=Schedule::Activity::Attribute::Report->new(%schedule);
-	print $reporter->report(type=>'summary',values=>'avg',header=>1,names=>1,fmt=>'%0.4g',sep=>"\t",format=>'text')."\n";
 }
 
 my %opt=(
@@ -197,6 +203,7 @@ if($opt{notemerge}) {
 
 materialize(%schedule);
 
+if($opt{attribute}=~/\bvalue\b/)   { attrvalue(%schedule) }
 if($opt{attribute}=~/\bgrid\b/)    { attrgrid(%schedule) }
 if($opt{attribute}=~/\baverage\b/) { attraverage(%schedule) }
 if($opt{attribute}=~/\bavggrid\b/) { attravggrid(%schedule) }
@@ -236,9 +243,9 @@ Only merge the annotation groups specified by the names.  Default is all, alphab
 
 Do not merge annotation messages into the final schedule.
 
-=head2 --attribute=grid,average,avggrid
+=head2 --attribute=value,grid,average,avggrid
 
-Comma-separated, one or more:  'grid' shows values over time and overall average.  'average' shows only overall averages.  'avggrid' shows averages over time.
+Comma-separated, one or more:  'value' shows the final values.  'grid' shows values over time and overall average.  'average' shows only overall averages.  'avggrid' shows averages over time.
 
 =head2 --goal=(hash)
 
