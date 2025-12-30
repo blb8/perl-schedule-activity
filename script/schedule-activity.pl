@@ -4,7 +4,7 @@ use strict;
 use warnings;
 use Data::Dumper;
 use Getopt::Long;
-use JSON::XS qw/decode_json/;
+use JSON::MaybeXS qw/decode_json/;
 use Pod::Usage;
 use Schedule::Activity;
 use Schedule::Activity::Attribute::Report;
