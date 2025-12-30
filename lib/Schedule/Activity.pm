@@ -163,8 +163,8 @@ sub safetyChecks {
 	my %activities=map {$$builtNode{$_}=>$$builtNode{$_}{finish}} grep {defined($$builtNode{$_}{finish})} keys(%$builtNode);
 	my %finishes=map {$_=>1} values(%activities);
 	my %actions=map {$_=>$$builtNode{$_}} grep {!exists($activities{$$builtNode{$_}})&&!exists($finishes{$$builtNode{$_}})} keys(%$builtNode);
+	my %incompleteActivities=map {$_=>1} grep{!defined($reach{min}{$$builtNode{$_}}{$activities{$$builtNode{$_}}})} grep {defined($$builtNode{$_}{finish})} keys(%$builtNode);
 	#
-	my %incompleteActivities=map {$_=>1} grep{!defined($reach{min}{$_}{$activities{$_}})} keys(%activities);
 	push @errors,map {"Finish for activity $_ is unreachable"} keys(%incompleteActivities);
 	#
 	my (%orphans,%dualParent,%dualFinish,%dangling,%infiniteCycle);
