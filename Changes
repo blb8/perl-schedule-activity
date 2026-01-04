@@ -1,6 +1,6 @@
 Revision history for Schedule::Activity
 
-0.2.8 - 2026-01-??
+0.2.8 - 2026-01-04
 	- Update to JSON::MaybeXS
 	- Goal attribute weights
 	- Script per-activity goal support

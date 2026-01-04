@@ -48,7 +48,7 @@ Attribute recomputation is supported starting with 0.2.2, primarily for merged a
 
 Attribute average values are available for goals starting with 0.2.5, which also cleaned up behavioral questions about initial average values, and averages during time overlaps.  See L<Schedule::Activity/Consistency>.
 
-Attribute reporting supports many different output formats starting in 0.2.7.  Support for all options from the commandline is still pending.
+Attribute reporting supports many different output formats starting in 0.2.7.
 
 JSON output from the script is being considered, and would include JSON renderings of the attribute outputs.
 
