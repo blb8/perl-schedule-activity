@@ -379,10 +379,11 @@ sub goalScheduling {
 			my %cmp=%{$goal{attribute}{$k}};
 			my %attr=%{$schedule{attributes}{$k}//{}};
 			my $avg=$attr{avg}//0;
-			if   ($cmp{op} eq 'max') { $res+=$avg }
-			elsif($cmp{op} eq 'min') { $res-=$avg }
-			elsif($cmp{op} eq 'eq')  { $res-=abs($avg-$cmp{value}) }
-			elsif($cmp{op} eq 'ne')  { $res+=abs($avg-$cmp{value}) }
+			my $weight=$cmp{weight}//1;
+			if   ($cmp{op} eq 'max') { $res+=$avg*$weight }
+			elsif($cmp{op} eq 'min') { $res-=$avg*$weight }
+			elsif($cmp{op} eq 'eq')  { $res-=abs($avg-$cmp{value})*$weight }
+			elsif($cmp{op} eq 'ne')  { $res+=abs($avg-$cmp{value})*$weight }
 			elsif($cmp{op} eq 'XX')  {
 				my $xy=$attr{xy}//[];
 				foreach my $i (0..$#$xy-1) {
@@ -893,16 +894,16 @@ Goal seeking retries schedule construction and finds the best, I<random> schedul
   %schedule=$scheduler->schedule(goal=>{
     cycles=>N,
     attribute=>{
-      'name'=>{op=>'max'},
+      'name'=>{op=>'max', weight=>1},
       'name'=>{op=>'min'},
       'name'=>{op=>'eq', value=>x},
       'name'=>{op=>'ne', value=>x},
     }
   },...)
 
-One or more attributes may be included in the goal, and each of the C<cycles> (default 10) schedules will be scored based on the configured conditions.  The C<max> and C<min> operators seek the largest/smallest attribute I<average value> for the schedule.  The C<eq> and C<ne> operators score near/far from the provided C<value>.  Note that generated schedules may have a different number of activities, so some attribute goals may be equivalent to finding the shortest/longest action counts.
+One or more attributes may be included in the goal, and each of the C<cycles> (default 10) schedules will be scored based on the configured conditions.  The C<max> and C<min> operators seek the largest/smallest attribute I<average value> for the schedule.  The C<eq> and C<ne> operators score near/far from the provided C<value>.  The optional C<weight> is a multiplier for the attribute value in the scoring function; see C<samples/goalweights.pl> for more details.  Note that generated schedules may have a different number of activities, so some attribute goals may be equivalent to finding the shortest/longest action counts.
 
-Goal scheduling is experimental starting with 0.2.4.  Attributes currently have equal weighting and scores are linear.  If no schedule can be generated, the most recent error will raise via C<die()>.  Goals can be different during different invocations of incremental construction.
+Goal scheduling is experimental starting with 0.2.4.  If no schedule can be generated, the most recent error will raise via C<die()>.  Goals can be different during different invocations of incremental construction.
 
 =head2 Per-Activity Goals
 
