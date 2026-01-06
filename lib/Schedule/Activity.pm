@@ -21,6 +21,7 @@ sub new {
 		built   =>undef,
 		reach   =>undef,
 		unsafe  =>$opt{unsafe}//0,
+		PNA     =>undef, # per node attribute prefix, loaded via config
 	);
 	return bless(\%self,$class);
 }
@@ -190,11 +191,17 @@ sub safetyChecks {
 sub _buildConfig {
 	my ($self)=@_;
 	my %base=%{$$self{config}};
+	my $attr=$self->_attr();
 	my %res;
+	if($base{PNA}) { $$self{PNA}=$base{PNA} }
 	while(my ($k,$node)=each %{$base{node}}) {
 		if(is_plain_hashref($node)) { $res{node}{$k}=Schedule::Activity::Node->new(%$node) }
 		else { $res{node}{$k}=$node }
 		$res{node}{$k}{keyname}=$k;
+		if($$self{PNA}) {
+			$res{node}{$k}{attributes}{"$$self{PNA}$k"}={incr=>1};
+			$attr->register("$$self{PNA}$k",type=>'int',value=>0);
+		}
 	}
 	my $msgNames=$base{messages}//{};
 	while(my ($k,$node)=each %{$res{node}}) {
@@ -378,7 +385,9 @@ sub goalScheduling {
 		foreach my $k (keys %{$goal{attribute}}) {
 			my %cmp=%{$goal{attribute}{$k}};
 			my %attr=%{$schedule{attributes}{$k}//{}};
-			my $avg=$attr{avg}//0;
+			my $avg;
+			if($$self{PNA}&&($k=~/^\Q$$self{PNA}\E/)) { $avg=$attr{y}//0 }
+			else                                      { $avg=$attr{avg}//0 }
 			my $weight=$cmp{weight}//1;
 			if   ($cmp{op} eq 'max') { $res+=$avg*$weight }
 			elsif($cmp{op} eq 'min') { $res-=$avg*$weight }
@@ -589,12 +598,13 @@ Version 0.2.8
       annotations=>{...},
       attributes =>{...},
       messages   =>{...},
-    }
-	);
+      PNA        =>...,
+    },
+  );
   my %schedule=$scheduler->schedule(activities=>[
-		[30,'Activity'],
-		...
-	]);
+    [30,'Activity'],
+    ...
+  ]);
   if($schedule{error}) { die join("\n",@{$schedule{error}}) }
   print join("\n",map {"$$_[0]:  $$_[1]{message}"} @{$schedule{activities}});
 
@@ -748,6 +758,8 @@ The scheduling configuration may also declare attribute names and starting value
 Boolean types must be declared in this section.  It is recommended to set any non-zero initial values in this fashion, since calling C<set> requires that activity to always be the first requested in the schedule.
 
 Attributes within message alternate configurations and named messages are identified during configuration validation.  Together with activity/action configurations, attributes are verified before schedule construction, which will fail if an attribute name is referenced in a conflicting manner.
+
+Automatic, per-node attributes may be enabled by including C<PNA=E<gt>'prefix:'> within the configuration.  Each node, "keyname", will automatically increment an attribute named "prefix:keyname" each time that activity/action appears in the schedule.  These attributes are included in the report and can be used for node filtering.  Per-node attributes are disabled by default.
 
 =head2 Precedence
 

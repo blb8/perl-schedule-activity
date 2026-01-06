@@ -110,6 +110,7 @@ my %opt=(
 	notemerge =>1,
 	noteorder =>undef,
 	attribute =>'',
+	pna       =>undef,
 	tslack    =>undef,
 	tbuffer   =>undef,
 	goal      =>undef,
@@ -127,6 +128,7 @@ GetOptions(
 	'notemerge!'  =>\$opt{notemerge},
 	'noteorder=s' =>\$opt{noteorder},
 	'attribute=s' =>\$opt{attribute},
+	'pna!'        =>\$opt{pna},
 	'tslack=f'    =>\$opt{tslack},
 	'tbuffer=f'   =>\$opt{tbuffer},
 	'goal=s'      =>\$opt{goal},
@@ -203,6 +205,9 @@ if($opt{notemerge}) {
 
 materialize(%schedule);
 
+if($configuration{PNA}&&!$opt{pna}) {
+	foreach my $k (grep {/^\Q$configuration{PNA}\E/} keys %{$schedule{attributes}}) {
+		delete($schedule{attributes}{$k}) } }
 if($opt{attribute}=~/\bvalue\b/)   { attrvalue(%schedule) }
 if($opt{attribute}=~/\bgrid\b/)    { attrgrid(%schedule) }
 if($opt{attribute}=~/\baverage\b/) { attraverage(%schedule) }
