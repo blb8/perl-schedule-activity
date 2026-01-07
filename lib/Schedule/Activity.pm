@@ -759,7 +759,7 @@ Boolean types must be declared in this section.  It is recommended to set any no
 
 Attributes within message alternate configurations and named messages are identified during configuration validation.  Together with activity/action configurations, attributes are verified before schedule construction, which will fail if an attribute name is referenced in a conflicting manner.
 
-Automatic, per-node attributes may be enabled by including C<PNA=E<gt>'prefix:'> within the configuration.  Each node, "keyname", will automatically increment an attribute named "prefix:keyname" each time that activity/action appears in the schedule.  These attributes are included in the report and can be used for node filtering.  Per-node attributes are disabled by default.
+Automatic, per-node attributes may be enabled by including C<PNA=E<gt>'prefix:'> within the configuration.  Each node, "keyname", will automatically increment an attribute named "prefix:keyname" each time that activity/action appears in the schedule.  These attributes are included in the report and can be used for node filtering.  When used in goals, per-node attributes are compared based on their final y-value/count (not the average).  Per-activity goals should consider the accumulated totals, not just the change of the attribute within that activity; however, per-node attributes are not special and can be reset within an activity/action configuration.  Per-node attributes are disabled by default.
 
 =head2 Precedence
 

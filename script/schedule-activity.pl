@@ -110,7 +110,6 @@ my %opt=(
 	notemerge =>1,
 	noteorder =>undef,
 	attribute =>'',
-	pna       =>undef,
 	tslack    =>undef,
 	tbuffer   =>undef,
 	goal      =>undef,
@@ -128,7 +127,6 @@ GetOptions(
 	'notemerge!'  =>\$opt{notemerge},
 	'noteorder=s' =>\$opt{noteorder},
 	'attribute=s' =>\$opt{attribute},
-	'pna!'        =>\$opt{pna},
 	'tslack=f'    =>\$opt{tslack},
 	'tbuffer=f'   =>\$opt{tbuffer},
 	'goal=s'      =>\$opt{goal},
@@ -205,7 +203,7 @@ if($opt{notemerge}) {
 
 materialize(%schedule);
 
-if($configuration{PNA}&&!$opt{pna}) {
+if($configuration{PNA}&&($opt{attribute}!~/\bpna\b/)) {
 	foreach my $k (grep {/^\Q$configuration{PNA}\E/} keys %{$schedule{attributes}}) {
 		delete($schedule{attributes}{$k}) } }
 if($opt{attribute}=~/\bvalue\b/)   { attrvalue(%schedule) }
@@ -248,9 +246,9 @@ Only merge the annotation groups specified by the names.  Default is all, alphab
 
 Do not merge annotation messages into the final schedule.
 
-=head2 --attribute=value,grid,average,avggrid
+=head2 --attribute=value,grid,average,avggrid,pna
 
-Comma-separated, one or more:  'value' shows the final values.  'grid' shows values over time and overall average.  'average' shows only overall averages.  'avggrid' shows averages over time.
+Comma-separated, one or more:  'value' shows the final values.  'grid' shows values over time and overall average.  'average' shows only overall averages.  'avggrid' shows averages over time.  'pna' includes per-node attributes in the report (if enabled in the scheduling configuration).
 
 =head2 --goal=(hash)
 
