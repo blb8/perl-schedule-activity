@@ -6,7 +6,7 @@ use List::Util qw/any/;
 use Scalar::Util qw/looks_like_number/;
 use Ref::Util qw/is_arrayref/;
 
-our $VERSION='0.2.8';
+our $VERSION='0.2.9';
 
 my %property=map {$_=>undef} qw/tmmin tmavg tmmax next finish message attribute note attributes require/;
 
