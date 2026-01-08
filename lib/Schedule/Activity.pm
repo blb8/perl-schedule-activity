@@ -897,8 +897,6 @@ The final result above does generate annotations, but it's also possible to pass
 
   my %res=$scheduler->schedule(after=>$earlierSchedule, activities=>[]);
 
-This functionality is experimental starting with Version 0.2.1.
-
 =head2 Goals
 
 Goal seeking retries schedule construction and finds the best, I<random> schedule meeting criteria for attribute average values:
@@ -915,7 +913,7 @@ Goal seeking retries schedule construction and finds the best, I<random> schedul
 
 One or more attributes may be included in the goal, and each of the C<cycles> (default 10) schedules will be scored based on the configured conditions.  The C<max> and C<min> operators seek the largest/smallest attribute I<average value> for the schedule.  The C<eq> and C<ne> operators score near/far from the provided C<value>.  The optional C<weight> is a multiplier for the attribute value in the scoring function; see C<samples/goalweights.pl> for more details.  Note that generated schedules may have a different number of activities, so some attribute goals may be equivalent to finding the shortest/longest action counts.
 
-Goal scheduling is experimental starting with 0.2.4.  If no schedule can be generated, the most recent error will raise via C<die()>.  Goals can be different during different invocations of incremental construction.
+If no schedule can be generated, the most recent error will raise via C<die()>.  Goals can be different during different invocations of incremental construction.
 
 =head2 Per-Activity Goals
 
@@ -947,8 +945,6 @@ When per-activity scheduling is active, any goals specified in the call to C<sch
     goal=>{GOAL});
 
 Goal scheduling for an activity may be skipped with the goal C<{cycles=E<gt>1,attribute=E<gt>{}}>, or by calling incremental construction with goals only for the desired activities.
-
-Per-activity goal scheduling is experimental starting with 0.2.7.
 
 =head1 IMPORT MECHANISMS
 
