@@ -4,6 +4,7 @@ use strict;
 use warnings;
 use List::Util qw/any/;
 use Scalar::Util qw/looks_like_number/;
+use Ref::Util qw/is_arrayref/;
 
 our $VERSION='0.2.8';
 
@@ -68,7 +69,7 @@ sub validate {
 		if($tmseq[1]>$tmseq[2]) { push @errors,"Invalid:  tmavg>tmmax" }
 	}
 	if(exists($node{next})) {
-		if(ref($node{next}) ne 'ARRAY') { push @errors,'Expected array:  next' }
+		if(!is_arrayref($node{next})) { push @errors,'Expected array:  next' }
 		else {
 			@invalids=grep {!defined($_)||ref($_)} @{$node{next}//[]};
 			if(@invalids) { push @errors,'Undefined name in array:  next' }
