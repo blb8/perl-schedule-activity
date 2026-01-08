@@ -18,7 +18,7 @@ subtest 'validation'=>sub {
 					'2'=>{},
 				},
 			});
-	is_deeply({$scheduler->schedule()},{error=>['Node 1, Undefined name in array:  next']},'node:  invalid next entry');
+	is_deeply({$scheduler->schedule()},{error=>['Node 1, Invalid entry in:  next']},'node:  invalid next entry');
 	$scheduler=Schedule::Activity->new(
 			configuration=>{
 				node=>{

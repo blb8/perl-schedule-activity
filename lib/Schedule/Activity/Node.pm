@@ -3,7 +3,9 @@ package Schedule::Activity::Node;
 use strict;
 use warnings;
 use List::Util qw/any/;
+use Ref::Util qw/is_arrayref is_hashref/;
 use Scalar::Util qw/looks_like_number/;
+
 
 our $VERSION='0.2.8';
 
@@ -68,11 +70,12 @@ sub validate {
 		if($tmseq[1]>$tmseq[2]) { push @errors,"Invalid:  tmavg>tmmax" }
 	}
 	if(exists($node{next})) {
-		if(ref($node{next}) ne 'ARRAY') { push @errors,'Expected array:  next' }
-		else {
-			@invalids=grep {!defined($_)||ref($_)} @{$node{next}//[]};
-			if(@invalids) { push @errors,'Undefined name in array:  next' }
-		}
+		my @nexts;
+		if   (is_arrayref($node{next})) { @nexts=@{$node{next}} }
+		elsif(is_hashref ($node{next})) { @nexts=keys %{$node{next}} }
+		else { push @errors,'Expected array:  next' }
+		@invalids=grep {!defined($_)||ref($_)} @nexts;
+		if(@invalids) { push @errors,'Invalid entry in:  next' }
 	}
 	if(exists($node{finish})) {
 		if(!defined($node{finish})||ref($node{finish})) { push @errors,'Expected name:  finish' }
@@ -95,16 +98,28 @@ sub increment {
 sub nextrandom {
 	my ($self,%opt)=@_;
 	if(!$$self{next}) { return }
-	my @candidates;
+	my (@candidates,$weight);
+	if(is_hashref($$self{next})) { die "{next} hash not yet supported" }
+	if(is_arrayref($$self{next})) {
 	foreach my $next (@{$$self{next}}) {
 		if($opt{not}&&($opt{not} eq $next)) { next }
 		if(!ref($next)) { push @candidates,$next; next }
 		if($$next{require}&&$opt{attr}) {
 			if(!$$next{require}->matches($opt{tm},%{$opt{attr}})) { next } }
 		push @candidates,$next;
-	}
+	} }
+	elsif(is_hashref($$self{next})) {
+	foreach my $name (keys %{$$self{next}}) {
+		if($opt{not}&&($opt{not} eq $name)) { next }
+		my $next=$$self{next}{$name};
+		if($$next{require}&&$opt{attr}) {
+			if(!$$next{require}->matches($opt{tm},%{$opt{attr}})) { next } }
+		$weight+=$$next{weight}//1;
+		push @candidates,$name;
+	} }
 	if(!@candidates) { return }
-	return $candidates[ int(rand(1+$#candidates)) ];
+	if($weight) { ... }
+	else { return $candidates[ int(rand(1+$#candidates)) ] }
 }
 
 sub hasnext {
