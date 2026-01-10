@@ -676,7 +676,7 @@ Caution:  While startup/conclusion of activities may have fixed time specificati
 
 Providing any time value will automatically set any missing values at the fixed ratios 3,4,5.  EG, specifying only C<tmmax=40> will set C<tmmin=24> and C<tmavg=32>.  If provided two time values, priority is given to C<tmavg> to set the third.
 
-Scheduling may be controlled with the tension settings described below.  Future changes may support automatic slack/buffering, univeral slack/buffer ratios, and open-ended/relaxed slack/buffering.
+Scheduling may be controlled with the tension settings described below.  Future changes may support automatic slack/buffering, universal slack/buffer ratios, and open-ended/relaxed slack/buffering.
 
 =head2 Messages
 
@@ -839,7 +839,7 @@ Rudimentary merging mechanisms are provided in C<schedule-activity.pl>.
 
 =head2 Overview
 
-The configuration of the C<next> actions is the primary contributor to the schedules that can be built.  As with all algorithms of this type, there are many configurations that simply won't work well:  For example, this is not a maze solver, a best path finder, nor a resourcing optimization system.  Scheduling success toward the stated goals generally requires that actions have different C<tmmin>, C<tmmax>, and C<tmavg>, and that actions permit reasonable repetition and recursion.  Highly imbalanced actions, such as a branch of length 10 and another of length 5000, may always fail depending on the goal.  Neverthless, for the activities and actions so described, how does it work?
+The configuration of the C<next> actions is the primary contributor to the schedules that can be built.  As with all algorithms of this type, there are many configurations that simply won't work well:  For example, this is not a maze solver, a best path finder, nor a resourcing optimization system.  Scheduling success toward the stated goals generally requires that actions have different C<tmmin>, C<tmmax>, and C<tmavg>, and that actions permit reasonable repetition and recursion.  Highly imbalanced actions, such as a branch of length 10 and another of length 5000, may always fail depending on the goal.  Nevertheless, for the activities and actions so described, how does it work?
 
 The scheduler is a randomized, opportunistic, single-step path growth algorithm.  An activity starts at the indicated node.  At each step, the C<next> entries are filtered and a random action is chosen, then the process repeats.  The selection of the next step is restricted based on the I<current time> (at the end of the action) as follows.
 
@@ -966,7 +966,7 @@ Rudimentary markdown support is included for lists of actions that are all equal
   - Activity Three, 5min
     * Action one, 5min
 
-Any list identification markers may be used interchangably (number plus period, asterisks, hyphen).  One or more leading whitespace (tabs or spaces) indicates an action; otherwise the line indicates an activity.  Times are specified as C<\d+min> or C<\d+sec>.  If only a single action is included in an activity, its configured time should be equal to the activity time.
+Any list identification markers may be used (number plus period, asterisks, hyphen).  One or more leading whitespace (tabs or spaces) indicates an action; otherwise the line indicates an activity.  Times are specified as C<\d+min> or C<\d+sec>.  If only a single action is included in an activity, its configured time should be equal to the activity time.
 
 The imported configuration permits an activity to be followed by any of its actions, and any action can be followed by any other action within the activity (but not itself).  Any action can terminate the activity.
 
