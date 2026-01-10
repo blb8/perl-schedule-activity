@@ -4,7 +4,7 @@ use strict;
 use warnings;
 use List::Util qw/any/;
 use Scalar::Util qw/looks_like_number/;
-use Ref::Util qw/is_arrayref/;
+use Ref::Util qw/is_arrayref is_ref/;
 
 our $VERSION='0.2.9';
 
@@ -18,7 +18,7 @@ my %defaults=(
 
 sub new {
 	my ($ref,%opt)=@_;
-	my $class=ref($ref)||$ref;
+	my $class=is_ref($ref)||$ref;
 	return bless(\%opt,$class);
 }
 
@@ -71,12 +71,12 @@ sub validate {
 	if(exists($node{next})) {
 		if(!is_arrayref($node{next})) { push @errors,'Expected array:  next' }
 		else {
-			@invalids=grep {!defined($_)||ref($_)} @{$node{next}//[]};
+			@invalids=grep {!defined($_)||is_ref($_)} @{$node{next}//[]};
 			if(@invalids) { push @errors,'Undefined name in array:  next' }
 		}
 	}
 	if(exists($node{finish})) {
-		if(!defined($node{finish})||ref($node{finish})) { push @errors,'Expected name:  finish' }
+		if(!defined($node{finish})||is_ref($node{finish})) { push @errors,'Expected name:  finish' }
 	}
 	if(!@errors) { $node{_valid}=1 }
 	return @errors;
@@ -87,9 +87,9 @@ sub buffer { my ($self)=@_; return ($$self{tmmax}//$$self{tmavg}//0)-($$self{tma
 
 sub increment {
 	my ($self,$tm,$slack,$buffer)=@_;
-	if(ref($tm))     { $$tm    +=$$self{tmavg}//0 }
-	if(ref($slack))  { $$slack +=$self->slack()   }
-	if(ref($buffer)) { $$buffer+=$self->buffer()  }
+	if(is_ref($tm))     { $$tm    +=$$self{tmavg}//0 }
+	if(is_ref($slack))  { $$slack +=$self->slack()   }
+	if(is_ref($buffer)) { $$buffer+=$self->buffer()  }
 	return $self;
 }
 
@@ -99,7 +99,7 @@ sub nextrandom {
 	my @candidates;
 	foreach my $next (@{$$self{next}}) {
 		if($opt{not}&&($opt{not} eq $next)) { next }
-		if(!ref($next)) { push @candidates,$next; next }
+		if(!is_ref($next)) { push @candidates,$next; next }
 		if($$next{require}&&$opt{attr}) {
 			if(!$$next{require}->matches($opt{tm},%{$opt{attr}})) { next } }
 		push @candidates,$next;

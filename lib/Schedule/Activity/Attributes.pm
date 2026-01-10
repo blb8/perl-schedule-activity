@@ -2,13 +2,14 @@ package Schedule::Activity::Attributes;
 
 use strict;
 use warnings;
+use Ref::Util qw/is_ref/;
 use Schedule::Activity::Attribute;
 
 our $VERSION='0.2.9';
 
 sub new {
 	my ($ref,%opt)=@_;
-	my $class=ref($ref)||$ref;
+	my $class=is_ref($ref)||$ref;
 	my %self=(
 		attr =>{},
 		stack=>[],

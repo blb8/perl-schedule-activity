@@ -2,7 +2,7 @@ package Schedule::Activity::Annotation;
 
 use strict;
 use warnings;
-use Ref::Util qw/is_hashref is_regexpref/;
+use Ref::Util qw/is_hashref is_regexpref is_ref/;
 use Scalar::Util qw/looks_like_number/;
 
 our $VERSION='0.2.9';
@@ -11,7 +11,7 @@ my %property=map {$_=>undef} qw/message nodes before between p limit attributes 
 
 sub new {
 	my ($ref,%opt)=@_;
-	my $class=ref($ref)||$ref;
+	my $class=is_ref($ref)||$ref;
 	return bless(\%opt,$class);
 }
 

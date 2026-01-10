@@ -2,7 +2,7 @@ package Schedule::Activity;
 
 use strict;
 use warnings;
-use Ref::Util qw/is_arrayref is_hashref is_plain_hashref/;
+use Ref::Util qw/is_arrayref is_hashref is_plain_hashref is_ref/;
 use Schedule::Activity::Annotation;
 use Schedule::Activity::Attributes;
 use Schedule::Activity::Message;
@@ -13,7 +13,7 @@ our $VERSION='0.2.9';
 
 sub new {
 	my ($ref,%opt)=@_;
-	my $class=ref($ref)||$ref;
+	my $class=is_ref($ref)||$ref;
 	my %self=(
 		config  =>$opt{configuration}//{},
 		attr    =>undef,

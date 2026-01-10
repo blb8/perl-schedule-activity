@@ -10,7 +10,7 @@ my %property=map {$_=>undef} qw/message attributes names note/;
 
 sub new {
 	my ($ref,%opt)=@_;
-	my $class=ref($ref)||$ref;
+	my $class=is_ref($ref)||$ref;
 	my %self=(
 		attributes=>$opt{attributes}//{},
 		msg       =>[],
