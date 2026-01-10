@@ -5,9 +5,9 @@ use warnings;
 use List::Util qw/any/;
 use Ref::Util qw/is_arrayref is_hashref/;
 use Scalar::Util qw/looks_like_number/;
+use Ref::Util qw/is_arrayref is_ref/;
 
-
-our $VERSION='0.2.8';
+our $VERSION='0.2.9';
 
 my %property=map {$_=>undef} qw/tmmin tmavg tmmax next finish message attribute note attributes require/;
 
@@ -19,7 +19,7 @@ my %defaults=(
 
 sub new {
 	my ($ref,%opt)=@_;
-	my $class=ref($ref)||$ref;
+	my $class=is_ref($ref)||$ref;
 	return bless(\%opt,$class);
 }
 
@@ -36,18 +36,19 @@ sub defaulting {
 			$$node{tmmax}//=$$node{tmavg}*$defaults{'tmmax/tmavg'};
 			$$node{tmmin}//=$$node{tmavg}/$defaults{'tmavg/tmmin'};
 		}
-		elsif($lln[0]&&$lln[2]) {
-			$$node{tmavg}=0.5*($$node{tmmin}+$$node{tmmax})
-		}
 		elsif($lln[0]) {
-			$$node{tmmax}//=$$node{tmmin}*$defaults{'tmmax/tmmin'};
-			$$node{tmavg}//=$$node{tmmin}*$defaults{'tmavg/tmmin'};
+			if($lln[2]) { $$node{tmavg}=0.5*($$node{tmmin}+$$node{tmmax}) }
+			else {
+				$$node{tmmax}//=$$node{tmmin}*$defaults{'tmmax/tmmin'};
+				$$node{tmavg}//=$$node{tmmin}*$defaults{'tmavg/tmmin'};
+			}
 		}
 		elsif($lln[2]) {
 			$$node{tmavg}//=$$node{tmmax}/$defaults{'tmmax/tmavg'};
 			$$node{tmmin}//=$$node{tmmax}/$defaults{'tmmax/tmmin'};
 		}
 	}
+	return;
 }
 
 sub validate {
@@ -73,12 +74,12 @@ sub validate {
 		my @nexts;
 		if   (is_arrayref($node{next})) { @nexts=@{$node{next}} }
 		elsif(is_hashref ($node{next})) { @nexts=keys %{$node{next}} }
-		else { push @errors,'Expected array:  next' }
-		@invalids=grep {!defined($_)||ref($_)} @nexts;
+		else { push @errors,'Expected array/hash:  next' }
+		@invalids=grep {!defined($_)||is_ref($_)} @nexts;
 		if(@invalids) { push @errors,'Invalid entry in:  next' }
 	}
 	if(exists($node{finish})) {
-		if(!defined($node{finish})||ref($node{finish})) { push @errors,'Expected name:  finish' }
+		if(!defined($node{finish})||is_ref($node{finish})) { push @errors,'Expected name:  finish' }
 	}
 	if(!@errors) { $node{_valid}=1 }
 	return @errors;
@@ -89,9 +90,9 @@ sub buffer { my ($self)=@_; return ($$self{tmmax}//$$self{tmavg}//0)-($$self{tma
 
 sub increment {
 	my ($self,$tm,$slack,$buffer)=@_;
-	if(ref($tm))     { $$tm    +=$$self{tmavg}//0 }
-	if(ref($slack))  { $$slack +=$self->slack()   }
-	if(ref($buffer)) { $$buffer+=$self->buffer()  }
+	if(is_ref($tm))     { $$tm    +=$$self{tmavg}//0 }
+	if(is_ref($slack))  { $$slack +=$self->slack()   }
+	if(is_ref($buffer)) { $$buffer+=$self->buffer()  }
 	return $self;
 }
 
@@ -103,7 +104,7 @@ sub nextrandom {
 	if(is_arrayref($$self{next})) {
 	foreach my $next (@{$$self{next}}) {
 		if($opt{not}&&($opt{not} eq $next)) { next }
-		if(!ref($next)) { push @candidates,$next; next }
+		if(!is_ref($next)) { push @candidates,$next; next }
 		if($$next{require}&&$opt{attr}) {
 			if(!$$next{require}->matches($opt{tm},%{$opt{attr}})) { next } }
 		push @candidates,$next;

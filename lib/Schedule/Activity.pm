@@ -2,18 +2,19 @@ package Schedule::Activity;
 
 use strict;
 use warnings;
-use Ref::Util qw/is_arrayref is_hashref is_plain_hashref/;
+use List::Util qw/any/;
+use Ref::Util qw/is_arrayref is_hashref is_plain_hashref is_ref/;
 use Schedule::Activity::Annotation;
 use Schedule::Activity::Attributes;
 use Schedule::Activity::Message;
 use Schedule::Activity::Node;
 use Schedule::Activity::NodeFilter;
 
-our $VERSION='0.2.8';
+our $VERSION='0.2.9';
 
 sub new {
 	my ($ref,%opt)=@_;
-	my $class=ref($ref)||$ref;
+	my $class=is_ref($ref)||$ref;
 	my %self=(
 		config  =>$opt{configuration}//{},
 		attr    =>undef,
@@ -86,10 +87,10 @@ sub _validateConfig {
 	$config{annotations}//={};
 	if(!is_hashref($config{annotations})) { push @errors,'Annotations must be a hash' }
 	else { while(my ($k,$notes)=each %{$config{annotations}}) {
-		push @errors,map {"Annotation $k:  $_"} map {
+		push @errors,map {"Annotation $k:  $_"} map {(
 			Schedule::Activity::Annotation::validate(%$_),
 			Schedule::Activity::Message::validate($$_{message},names=>$config{messages})
-			} @$notes } }
+			)} @$notes } }
 	return @errors;
 }
 
@@ -352,11 +353,13 @@ sub goalScheduling {
 	my %goal=%{delete($opt{goal})};
 	if(!is_hashref($goal{attribute})) { return (error=>'goal{attribute} must be hash') }
 	{ my $attr=$self->_attr();
+		my %validOp=map {$_=>undef} (qw/min max eq ne/);
+		my %valueOp=map {$_=>undef} (qw/eq ne/);
 		foreach my $k (keys %{$goal{attribute}}) {
 			if(!defined($$attr{attr}{$k})) { return (error=>"goal-requested attribute does not exist:  $k") }
 			if(!defined($goal{attribute}{$k}{op})) { return (error=>"missing operator in goal $k") }
-			if(($goal{attribute}{$k}{op}//'')!~/^(?:max|min|eq|ne)$/) { return (error=>"invalid operator in goal $k") }
-			if(($goal{attribute}{$k}{op}=~/^(?:eq|ne)$/)&&!defined($goal{attribute}{$k}{value})) { return (error=>"missing value in goal $k") }
+			if(!exists($validOp{$goal{attribute}{$k}{op}//''})) { return (error=>"invalid operator in goal $k") }
+			if(exists($valueOp{$goal{attribute}{$k}{op}})&&!defined($goal{attribute}{$k}{value})) { return (error=>"missing value in goal $k") }
 		}
 	}
 	my $cycles=$goal{cycles}//10;
@@ -446,7 +449,7 @@ sub schedule {
 	my %check=$self->compile(unsafe=>$opt{unsafe}//$$self{unsafe});
 	if($check{error})                  { return (error=>$check{error}) }
 	if(!is_arrayref($opt{activities})) { return (error=>'Activities must be an array') }
-	if(grep {is_hashref($$_[2])&&defined($$_[2]{goal})} @{$opt{activities}}) { return $self->incrementalScheduling(%opt) }
+	if(any {is_hashref($$_[2])&&defined($$_[2]{goal})} @{$opt{activities}}) { return $self->incrementalScheduling(%opt) }
 	if($opt{goal}&&%{$opt{goal}})      { return $self->goalScheduling(%opt) }
 	my $tmoffset=$opt{tmoffset}//0;
 	my %res=(stat=>{slack=>0,buffer=>0});
@@ -483,7 +486,7 @@ sub schedule {
 			}
 		}
 		@schedule=sort {$$a[0]<=>$$b[0]} @schedule;
-		for(my $i=0;$i<$#schedule;$i++) {
+		for(my $i=0;$i<$#schedule;$i++) {  ## no critic (CStyleForLoops)
 			if($schedule[$i+1][0]==$schedule[$i][0]) {
 				splice(@schedule,$i+1,1); $i-- } }
 		$res{annotations}{$group}{events}=\@schedule;
@@ -566,7 +569,7 @@ Schedule::Activity - Generate activity schedules
 
 =head1 VERSION
 
-Version 0.2.8
+Version 0.2.9
 
 =head1 SYNOPSIS
 
@@ -673,7 +676,7 @@ Caution:  While startup/conclusion of activities may have fixed time specificati
 
 Providing any time value will automatically set any missing values at the fixed ratios 3,4,5.  EG, specifying only C<tmmax=40> will set C<tmmin=24> and C<tmavg=32>.  If provided two time values, priority is given to C<tmavg> to set the third.
 
-Scheduling may be controlled with the tension settings described below.  Future changes may support automatic slack/buffering, univeral slack/buffer ratios, and open-ended/relaxed slack/buffering.
+Scheduling may be controlled with the tension settings described below.  Future changes may support automatic slack/buffering, universal slack/buffer ratios, and open-ended/relaxed slack/buffering.
 
 =head2 Messages
 
@@ -836,7 +839,7 @@ Rudimentary merging mechanisms are provided in C<schedule-activity.pl>.
 
 =head2 Overview
 
-The configuration of the C<next> actions is the primary contributor to the schedules that can be built.  As with all algorithms of this type, there are many configurations that simply won't work well:  For example, this is not a maze solver, a best path finder, nor a resourcing optimization system.  Scheduling success toward the stated goals generally requires that actions have different C<tmmin>, C<tmmax>, and C<tmavg>, and that actions permit reasonable repetition and recursion.  Highly imbalanced actions, such as a branch of length 10 and another of length 5000, may always fail depending on the goal.  Neverthless, for the activities and actions so described, how does it work?
+The configuration of the C<next> actions is the primary contributor to the schedules that can be built.  As with all algorithms of this type, there are many configurations that simply won't work well:  For example, this is not a maze solver, a best path finder, nor a resourcing optimization system.  Scheduling success toward the stated goals generally requires that actions have different C<tmmin>, C<tmmax>, and C<tmavg>, and that actions permit reasonable repetition and recursion.  Highly imbalanced actions, such as a branch of length 10 and another of length 5000, may always fail depending on the goal.  Nevertheless, for the activities and actions so described, how does it work?
 
 The scheduler is a randomized, opportunistic, single-step path growth algorithm.  An activity starts at the indicated node.  At each step, the C<next> entries are filtered and a random action is chosen, then the process repeats.  The selection of the next step is restricted based on the I<current time> (at the end of the action) as follows.
 
@@ -963,7 +966,7 @@ Rudimentary markdown support is included for lists of actions that are all equal
   - Activity Three, 5min
     * Action one, 5min
 
-Any list identification markers may be used interchangably (number plus period, asterisks, hyphen).  One or more leading whitespace (tabs or spaces) indicates an action; otherwise the line indicates an activity.  Times are specified as C<\d+min> or C<\d+sec>.  If only a single action is included in an activity, its configured time should be equal to the activity time.
+Any list identification markers may be used (number plus period, asterisks, hyphen).  One or more leading whitespace (tabs or spaces) indicates an action; otherwise the line indicates an activity.  Times are specified as C<\d+min> or C<\d+sec>.  If only a single action is included in an activity, its configured time should be equal to the activity time.
 
 The imported configuration permits an activity to be followed by any of its actions, and any action can be followed by any other action within the activity (but not itself).  Any action can terminate the activity.
 

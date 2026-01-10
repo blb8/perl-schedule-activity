@@ -13,12 +13,12 @@ subtest 'validation'=>sub {
 	is_deeply([&$f(tmmin=>'hi',tmavg=>-5,tmmax=>5)],['Invalid value:  tmmin','Negative value:  tmavg'],'invalid tm values');
 	is_deeply([&$f(tmmin=>5,tmavg=>4,tmmax=>3)],['Invalid:  tmmin>tmavg','Invalid:  tmavg>tmmax'],'tm decreasing sequence');
 	is_deeply([&$f(tmmin=>5,tmavg=>5,tmmax=>5)],[],'tm non-increasing sequence');
-	is_deeply([&$f(next=>'name')],['Expected array:  next'],'invalid next');
+	is_deeply([&$f(next=>'name')],['Expected array/hash:  next'],'invalid next');
 	is_deeply([&$f(finish=>[])],['Expected name:  finish'],'invalid finish');
 };
 
 subtest 'defaulting'=>sub {
-	plan tests=>6;
+	plan tests=>7;
 	my ($tol,%node)=(1e-6);
 	my $f=\&Schedule::Activity::Node::defaulting;
 	my $approx=sub {
@@ -29,6 +29,7 @@ subtest 'defaulting'=>sub {
 	%node=(tmavg=>20); &$f(\%node); &$approx($node{tmmin},15,'avg->min'); &$approx($node{tmmax},25,'avg->max');
 	%node=(tmmax=>25); &$f(\%node); &$approx($node{tmmin},15,'max->min'); &$approx($node{tmavg},20,'max->avg');
 	%node=(tmmin=>15); &$f(\%node); &$approx($node{tmavg},20,'min->avg'); &$approx($node{tmmax},25,'min->max');
+	%node=(tmmin=>15,tmmax=>35); &$f(\%node);                             &$approx($node{tmavg},25,'min/max->avg');
 };
 
 subtest 'slack/buffer'=>sub {
