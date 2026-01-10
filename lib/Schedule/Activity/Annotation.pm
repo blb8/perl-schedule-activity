@@ -53,7 +53,7 @@ sub annotate {
 	}
 	if($$self{limit}) { while(1+$#notes>$$self{limit}) {
 		my $idx=int(rand(1+$#notes)); splice(@notes,$idx,1) } }
-	for(my $i=1;$i<=$#notes;$i++) {
+	for(my $i=1;$i<=$#notes;$i++) {  ## no critic (CStyleForLoops)
 		if($notes[$i][0]-$notes[$i-1][0]<$opt{between}) {
 			if($notes[$i][1]-$notes[$i-1][0]<$opt{between}) { splice(@notes,$i,1); $i-- }
 			else { $notes[$i][0]=$notes[$i-1][0]+$opt{between} }

@@ -2,6 +2,7 @@ package Schedule::Activity;
 
 use strict;
 use warnings;
+use List::Util qw/any/;
 use Ref::Util qw/is_arrayref is_hashref is_plain_hashref is_ref/;
 use Schedule::Activity::Annotation;
 use Schedule::Activity::Attributes;
@@ -86,10 +87,10 @@ sub _validateConfig {
 	$config{annotations}//={};
 	if(!is_hashref($config{annotations})) { push @errors,'Annotations must be a hash' }
 	else { while(my ($k,$notes)=each %{$config{annotations}}) {
-		push @errors,map {"Annotation $k:  $_"} map {
+		push @errors,map {"Annotation $k:  $_"} map {(
 			Schedule::Activity::Annotation::validate(%$_),
 			Schedule::Activity::Message::validate($$_{message},names=>$config{messages})
-			} @$notes } }
+			)} @$notes } }
 	return @errors;
 }
 
@@ -352,11 +353,13 @@ sub goalScheduling {
 	my %goal=%{delete($opt{goal})};
 	if(!is_hashref($goal{attribute})) { return (error=>'goal{attribute} must be hash') }
 	{ my $attr=$self->_attr();
+		my %validOp=map {$_=>undef} (qw/min max eq ne/);
+		my %valueOp=map {$_=>undef} (qw/eq ne/);
 		foreach my $k (keys %{$goal{attribute}}) {
 			if(!defined($$attr{attr}{$k})) { return (error=>"goal-requested attribute does not exist:  $k") }
 			if(!defined($goal{attribute}{$k}{op})) { return (error=>"missing operator in goal $k") }
-			if(($goal{attribute}{$k}{op}//'')!~/^(?:max|min|eq|ne)$/) { return (error=>"invalid operator in goal $k") }
-			if(($goal{attribute}{$k}{op}=~/^(?:eq|ne)$/)&&!defined($goal{attribute}{$k}{value})) { return (error=>"missing value in goal $k") }
+			if(!exists($validOp{$goal{attribute}{$k}{op}//''})) { return (error=>"invalid operator in goal $k") }
+			if(exists($valueOp{$goal{attribute}{$k}{op}})&&!defined($goal{attribute}{$k}{value})) { return (error=>"missing value in goal $k") }
 		}
 	}
 	my $cycles=$goal{cycles}//10;
@@ -446,7 +449,7 @@ sub schedule {
 	my %check=$self->compile(unsafe=>$opt{unsafe}//$$self{unsafe});
 	if($check{error})                  { return (error=>$check{error}) }
 	if(!is_arrayref($opt{activities})) { return (error=>'Activities must be an array') }
-	if(grep {is_hashref($$_[2])&&defined($$_[2]{goal})} @{$opt{activities}}) { return $self->incrementalScheduling(%opt) }
+	if(any {is_hashref($$_[2])&&defined($$_[2]{goal})} @{$opt{activities}}) { return $self->incrementalScheduling(%opt) }
 	if($opt{goal}&&%{$opt{goal}})      { return $self->goalScheduling(%opt) }
 	my $tmoffset=$opt{tmoffset}//0;
 	my %res=(stat=>{slack=>0,buffer=>0});
@@ -483,7 +486,7 @@ sub schedule {
 			}
 		}
 		@schedule=sort {$$a[0]<=>$$b[0]} @schedule;
-		for(my $i=0;$i<$#schedule;$i++) {
+		for(my $i=0;$i<$#schedule;$i++) {  ## no critic (CStyleForLoops)
 			if($schedule[$i+1][0]==$schedule[$i][0]) {
 				splice(@schedule,$i+1,1); $i-- } }
 		$res{annotations}{$group}{events}=\@schedule;

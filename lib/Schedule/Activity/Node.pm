@@ -35,18 +35,19 @@ sub defaulting {
 			$$node{tmmax}//=$$node{tmavg}*$defaults{'tmmax/tmavg'};
 			$$node{tmmin}//=$$node{tmavg}/$defaults{'tmavg/tmmin'};
 		}
-		elsif($lln[0]&&$lln[2]) {
-			$$node{tmavg}=0.5*($$node{tmmin}+$$node{tmmax})
-		}
 		elsif($lln[0]) {
-			$$node{tmmax}//=$$node{tmmin}*$defaults{'tmmax/tmmin'};
-			$$node{tmavg}//=$$node{tmmin}*$defaults{'tmavg/tmmin'};
+			if($lln[2]) { $$node{tmavg}=0.5*($$node{tmmin}+$$node{tmmax}) }
+			else {
+				$$node{tmmax}//=$$node{tmmin}*$defaults{'tmmax/tmmin'};
+				$$node{tmavg}//=$$node{tmmin}*$defaults{'tmavg/tmmin'};
+			}
 		}
 		elsif($lln[2]) {
 			$$node{tmavg}//=$$node{tmmax}/$defaults{'tmmax/tmavg'};
 			$$node{tmmin}//=$$node{tmmax}/$defaults{'tmmax/tmmin'};
 		}
 	}
+	return;
 }
 
 sub validate {

@@ -18,7 +18,7 @@ subtest 'validation'=>sub {
 };
 
 subtest 'defaulting'=>sub {
-	plan tests=>6;
+	plan tests=>7;
 	my ($tol,%node)=(1e-6);
 	my $f=\&Schedule::Activity::Node::defaulting;
 	my $approx=sub {
@@ -29,6 +29,7 @@ subtest 'defaulting'=>sub {
 	%node=(tmavg=>20); &$f(\%node); &$approx($node{tmmin},15,'avg->min'); &$approx($node{tmmax},25,'avg->max');
 	%node=(tmmax=>25); &$f(\%node); &$approx($node{tmmin},15,'max->min'); &$approx($node{tmavg},20,'max->avg');
 	%node=(tmmin=>15); &$f(\%node); &$approx($node{tmavg},20,'min->avg'); &$approx($node{tmmax},25,'min->max');
+	%node=(tmmin=>15,tmmax=>35); &$f(\%node);                             &$approx($node{tmavg},25,'min/max->avg');
 };
 
 subtest 'slack/buffer'=>sub {
