@@ -3,9 +3,8 @@ package Schedule::Activity::Node;
 use strict;
 use warnings;
 use List::Util qw/any/;
-use Ref::Util qw/is_arrayref is_hashref/;
-use Scalar::Util qw/looks_like_number/;
-use Ref::Util qw/is_arrayref is_ref/;
+use Ref::Util qw/is_arrayref is_hashref is_ref/;
+use Scalar::Util qw/blessed looks_like_number/;
 
 our $VERSION='0.2.9';
 
@@ -96,30 +95,37 @@ sub increment {
 	return $self;
 }
 
+sub _randweighted {
+	my ($weight,$L)=@_;
+	my $y=rand($weight);
+	my $i=0;
+	while(($i<$#$L)&&($y>$$L[$i][1]{weight}//1)) { $y-=$$L[$i][1]{weight}//1; $i++ }
+	return $$L[$i][0];
+}
+
 sub nextrandom {
 	my ($self,%opt)=@_;
 	if(!$$self{next}) { return }
 	my (@candidates,$weight);
-	if(is_hashref($$self{next})) { die "{next} hash not yet supported" }
 	if(is_arrayref($$self{next})) {
 	foreach my $next (@{$$self{next}}) {
 		if($opt{not}&&($opt{not} eq $next)) { next }
 		if(!is_ref($next)) { push @candidates,$next; next }
+		if(!blessed($next)) { next }
 		if($$next{require}&&$opt{attr}) {
 			if(!$$next{require}->matches($opt{tm},%{$opt{attr}})) { next } }
 		push @candidates,$next;
 	} }
 	elsif(is_hashref($$self{next})) {
-	foreach my $name (keys %{$$self{next}}) {
-		if($opt{not}&&($opt{not} eq $name)) { next }
-		my $next=$$self{next}{$name};
-		if($$next{require}&&$opt{attr}) {
-			if(!$$next{require}->matches($opt{tm},%{$opt{attr}})) { next } }
-		$weight+=$$next{weight}//1;
-		push @candidates,$name;
+	while(my ($next,$href)=each %{$$self{next}}) {
+		if($opt{not}&&($opt{not} eq $next)) { next }
+		if(blessed($$href{require})&&$opt{attr}) {
+			if(!$$href{require}->matches($opt{tm},%{$opt{attr}})) { next } }
+		my $w=$$href{weight}//1;
+		if($w>0) { $weight+=$w; push @candidates,[$next,$href] }
 	} }
 	if(!@candidates) { return }
-	if($weight) { ... }
+	if($weight) { return _randweighted($weight,\@candidates) }
 	else { return $candidates[ int(rand(1+$#candidates)) ] }
 }
 

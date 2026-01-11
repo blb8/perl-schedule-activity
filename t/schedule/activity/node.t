@@ -44,7 +44,7 @@ subtest 'slack/buffer'=>sub {
 };
 
 subtest 'next random'=>sub {
-	plan tests=>4;
+	plan tests=>5;
 	my $node=Schedule::Activity::Node->new(next=>[qw/one two three/]);
 	my %seen=map {$node->nextrandom()=>1} (1..30); # rewrite me to use a countdown loop variable
 	ok($seen{one},'Random:  one');
@@ -52,6 +52,26 @@ subtest 'next random'=>sub {
 	%seen=map {$node->nextrandom(not=>'one')=>1} (1..30); # rewrite me to use a countdown loop variable
 	ok(!$seen{one},'Not one:  one');
 	ok( $seen{two},'Not one:  two');
+	#
+	# Weighted.  Obviously these numbers are tied and should not be changed.
+	my $NB=120; # inner count, gather this many random nodes
+	my $NA=184; # outer count, Binomial distribution gives pfail(one==60)<1e-6. (and 173,135 for two/three)
+	my %need=(
+		one=>60,
+		two=>40,
+		three=>20,
+	);
+	my ($steps,$maxouter)=(0,$NA);
+	while($steps<$maxouter) {
+		%seen=();
+		$node=Schedule::Activity::Node->new(next=>{one=>{weight=>3},two=>{weight=>2},three=>{weight=>1}});
+		foreach (1..$NB) { $seen{$node->nextrandom()}++ }
+		foreach my $k (keys %need) { if($seen{$k}==$need{$k}) { delete($need{$k}) } }
+		if(!%need) { $maxouter=$steps }
+		$steps++;
+	}
+	if(%need) { print join(',',map {"$_=>$need{$_}"} keys %need),"\n" }
+	ok(!%need,"Weighted next ($steps steps)");
 };
 
 subtest 'has next'=>sub {
