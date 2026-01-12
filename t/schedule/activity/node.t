@@ -70,7 +70,6 @@ subtest 'next random'=>sub {
 		if(!%need) { $maxouter=$steps }
 		$steps++;
 	}
-	if(%need) { print join(',',map {"$_=>$need{$_}"} keys %need),"\n" }
 	ok(!%need,"Weighted next ($steps steps)");
 };
 

@@ -99,8 +99,8 @@ sub _randweighted {
 	my ($weight,$L)=@_;
 	my $y=rand($weight);
 	my $i=0;
-	while(($i<$#$L)&&($y>$$L[$i][1]{weight}//1)) { $y-=$$L[$i][1]{weight}//1; $i++ }
-	return $$L[$i][0];
+	while(($i<$#$L)&&($y>($$L[$i][1]{weight}//1))) { $y-=$$L[$i][1]{weight}//1; $i++ }
+	return $$L[$i][1]{node}//$$L[$i][0];
 }
 
 sub nextrandom {
@@ -118,9 +118,9 @@ sub nextrandom {
 	} }
 	elsif(is_hashref($$self{next})) {
 	while(my ($next,$href)=each %{$$self{next}}) {
-		if($opt{not}&&($opt{not} eq $next)) { next }
-		if(blessed($$href{require})&&$opt{attr}) {
-			if(!$$href{require}->matches($opt{tm},%{$opt{attr}})) { next } }
+		if($opt{not}&&($opt{not} eq $$href{node})) { next }
+		if(blessed($$href{node}{require})&&$opt{attr}) {
+			if(!$$href{node}{require}->matches($opt{tm},%{$opt{attr}})) { next } }
 		my $w=$$href{weight}//1;
 		if($w>0) { $weight+=$w; push @candidates,[$next,$href] }
 	} }
@@ -132,7 +132,9 @@ sub nextrandom {
 sub hasnext {
 	my ($self,$node)=@_;
 	if(!$$self{next}) { return }
-	return (any {$_ eq $node} @{$$self{next}});
+	if(is_arrayref($$self{next})) { return (any {$_ eq $node} @{$$self{next}}) }
+	if(is_hashref($$self{next}))  { return (any {$$_{node} eq $node} values %{$$self{next}}) }
+	return;
 }
 
 1;
