@@ -66,7 +66,7 @@ subtest 'next random'=>sub {
 		%seen=();
 		$node=Schedule::Activity::Node->new(next=>{one=>{weight=>3},two=>{weight=>2},three=>{weight=>1}});
 		foreach (1..$NB) { $seen{$node->nextrandom()}++ }
-		foreach my $k (keys %need) { if($seen{$k}==$need{$k}) { delete($need{$k}) } }
+		foreach my $k (keys %need) { if(($seen{$k}//0)==$need{$k}) { delete($need{$k}) } }
 		if(!%need) { $maxouter=$steps }
 		$steps++;
 	}

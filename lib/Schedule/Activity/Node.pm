@@ -64,10 +64,10 @@ sub validate {
 		else { push @invalids,$k }
 	}
 	@invalids=sort(@invalids);
-	if(@invalids&&($#invalids!=2)) { push @errors,"Incomplete time specification missing:  ".join(' ',@invalids) }
+	if(@invalids&&($#invalids!=2)) { push @errors,'Incomplete time specification missing:  '.join(' ',@invalids) }
 	if($#tmseq==2) {
-		if($tmseq[0]>$tmseq[1]) { push @errors,"Invalid:  tmmin>tmavg" }
-		if($tmseq[1]>$tmseq[2]) { push @errors,"Invalid:  tmavg>tmmax" }
+		if($tmseq[0]>$tmseq[1]) { push @errors,'Invalid:  tmmin>tmavg' }
+		if($tmseq[1]>$tmseq[2]) { push @errors,'Invalid:  tmavg>tmmax' }
 	}
 	if(exists($node{next})) {
 		my @nexts;
@@ -118,9 +118,10 @@ sub nextrandom {
 	} }
 	elsif(is_hashref($$self{next})) {
 	while(my ($next,$href)=each %{$$self{next}}) {
-		if($opt{not}&&($opt{not} eq $$href{node})) { next }
-		if(blessed($$href{node}{require})&&$opt{attr}) {
-			if(!$$href{node}{require}->matches($opt{tm},%{$opt{attr}})) { next } }
+		if($$href{node}) {
+			if($opt{not}&&($opt{not} eq $$href{node})) { next }
+			if(blessed($$href{node}{require})&&$opt{attr}) {
+				if(!$$href{node}{require}->matches($opt{tm},%{$opt{attr}})) { next } } }
 		my $w=$$href{weight}//1;
 		if($w>0) { $weight+=$w; push @candidates,[$next,$href] }
 	} }
