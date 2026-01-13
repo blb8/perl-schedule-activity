@@ -76,6 +76,11 @@ sub validate {
 		else { push @errors,'Expected array/hash:  next' }
 		@invalids=grep {!defined($_)||is_ref($_)} @nexts;
 		if(@invalids) { push @errors,'Invalid entry in:  next' }
+		if(is_hashref ($node{next})) {
+			my $weight=0;
+			foreach my $x (map {$$_{weight}//0} values %{$node{next}}) { $weight+=$x }
+			if($weight<=0) { push @errors,'Sum of weights must be positive' }
+		}
 	}
 	if(exists($node{finish})) {
 		if(!defined($node{finish})||is_ref($node{finish})) { push @errors,'Expected name:  finish' }

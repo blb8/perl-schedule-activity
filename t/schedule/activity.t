@@ -1080,7 +1080,7 @@ subtest 'Per-activity goals'=>sub {
 };
 
 subtest 'Next node weighting'=>sub {
-	plan tests=>1;
+	plan tests=>2;
 	my %nexts=(
 		A=>{weight=>3},
 		B=>{weight=>2},
@@ -1114,5 +1114,13 @@ subtest 'Next node weighting'=>sub {
 	}
 	if(defined($need{D})) { fail("Weighted next+require (saw D, $steps steps)") }
 	else { ok(!%need,"Weighted next+require ($steps steps)") }
+	#
+	$scheduler=Schedule::Activity->new(configuration=>{node=>{
+		start=>{finish=>'finish',tmavg=>0,next=>[qw/A/]},
+		finish=>{tmavg=>0},
+		A=>{tmavg=>1,next=>{A=>{weight=>0},finish=>{weight=>0}}}
+	}});
+	my %schedule=$scheduler->schedule(activities=>[[10,'start']]);
+	is_deeply($schedule{error},['Node A, Sum of weights must be positive'],'Zero weights invalid');
 };
 
