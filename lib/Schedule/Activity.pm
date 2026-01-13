@@ -310,12 +310,12 @@ sub scheduler {
 	if($path{retry}) { return scheduler(%opt,retries=>$opt{retries},error=>$path{error}//'Retries exhausted') }
 	my @res=@{$path{steps}};
 	my ($tm,$slack,$buffer)=@path{qw/tm slack buffer/};
-	if($res[-1][1] ne $opt{node}{finish}) { return scheduler(%opt,retries=>$opt{retries},error=>"Didn't reach finish node") }
+	if($res[-1][1] ne $opt{node}{finish}) { return scheduler(%opt,retries=>$opt{retries},error=>q|Didn't reach finish node|) }
 	#
 	my $excess=$tm-$opt{goal};
 	if(abs($excess)>0.5) {
 		if(($excess>0)&&($excess>$slack))   { return scheduler(%opt,retries=>$opt{retries},error=>"Excess exceeds slack ($excess>$slack)") }
-		if(($excess<0)&&(-$excess>$buffer)) { return scheduler(%opt,retries=>$opt{retries},error=>"Shortage exceeds buffer (".(-$excess).">$buffer)") }
+		if(($excess<0)&&(-$excess>$buffer)) { return scheduler(%opt,retries=>$opt{retries},error=>'Shortage exceeds buffer ('.(-$excess).">$buffer)") }
 		my ($reduction,$rate)=(0);
 		if($excess>0) { $rate=$excess/$slack }
 		else          { $rate=$excess/$buffer }
