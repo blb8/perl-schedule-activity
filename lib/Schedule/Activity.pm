@@ -652,20 +652,22 @@ Both activities and actions are configured as named C<node> entries.  With this 
 
   'activity name'=>{
     tmavg     =>value, ...,
-    next      =>[...],
     finish    =>'activity conclusion',
+    next      =>[...],
+    next      =>{name=>{weight=>value},...},
     message   =>...    # optional
     attributes=>{...}, # optional
   }
   'action name'=>{
     tmavg     =>value, ...,
     next      =>[...],
+    next      =>{...},
     message   =>...    # optional
     attributes=>{...}, # optional
     require   =>{...}, # optional
   }
 
-The list of C<next> nodes is a list of names, which must be defined in the configuration.  During schedule construction, entries will be I<chosen randomly> from the list of C<next> nodes.  The conclusion must be reachable from the initial activity, or scheduling will fail.  There is no further restriction on the items in C<next>:  Scheduling specifically supports cyclic/recursive actions, including self-cycles.
+An array of C<next> nodes is a list of names, which must be defined in the configuration.  During schedule construction, entries will be I<chosen randomly> from the list of C<next> nodes.  The conclusion must be reachable from the initial activity, or scheduling will fail.  Weighting is supported when C<next> is a hash, with keys that are the names of next possible actions and values of C<{weight=E<gt>number}>.  The total weight during scheduling includes only non-filtered nodes; the default weight is one (1).  There is no further restriction on the items in C<next>:  Scheduling specifically supports cyclic/recursive actions, including self-cycles.  
 
 There is no functional difference between activities and actions except that a node must contain C<finish> to be used for activity scheduling.  Nomenclature is primarily to support schedule organization:  A collection of random actions is used to build an activity; a sequence of activities is used to build a schedule.
 
