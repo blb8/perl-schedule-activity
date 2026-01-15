@@ -80,8 +80,7 @@ sub _validateConfig {
 		push @nerrors,Schedule::Activity::Message::validate($$node{message},names=>$config{messages});
 		foreach my $kv (Schedule::Activity::Message::attributesFromConf($$node{message})) { push @nerrors,$attr->register($$kv[0],%{$$kv[1]}) }
 		if(@nerrors) { push @errors,map {"Node $k, $_"} @nerrors; next }
-		if   (is_arrayref($$node{next})) { @invalids=grep {!defined($config{node}{$_})} @{$$node{next}} }
-		elsif(is_hashref ($$node{next})) { @invalids=grep {!defined($config{node}{$_})} keys %{$$node{next}} }
+		@invalids=grep {!defined($config{node}{$_})} Schedule::Activity::Node->nextnames(0,$$node{next}//[]);
 		if(@invalids) { push @errors,"Node $k, Undefined name in array:  next" }
 		if(defined($$node{finish})&&!defined($config{node}{$$node{finish}})) { push @errors,"Node $k, Undefined name:  finish" }
 	}
@@ -210,17 +209,7 @@ sub _buildConfig {
 	}
 	my $msgNames=$base{messages}//{};
 	while(my ($k,$node)=each %{$res{node}}) {
-		if(is_arrayref($$node{next})) {
-			my @nexts=map {$res{node}{$_}} @{$$node{next}};
-			if(@nexts) { $$node{next}=\@nexts }
-			else       { delete($$node{next}) }
-		}
-		elsif(is_hashref($$node{next})) {
-			while(my ($name,$next)=each %{$$node{next}}) {
-				my $target=$res{node}{$name};
-				$$next{node}=$target;
-			}
-		}
+		$node->nextremap($res{node});
 		if(defined($$node{finish})) { $$node{finish}=$res{node}{$$node{finish}} }
 		$$node{msg}=Schedule::Activity::Message->new(message=>$$node{message},names=>$msgNames);
 		if(is_plain_hashref($$node{require})) { $$node{require}=Schedule::Activity::NodeFilter->new(%{$$node{require}}) }

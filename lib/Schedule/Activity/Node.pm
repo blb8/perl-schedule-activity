@@ -50,6 +50,36 @@ sub defaulting {
 	return;
 }
 
+sub nextnames {
+	my ($self,$filtered,$node)=@_;
+	$node//=$$self{next};
+	if(is_arrayref($node)) {
+		my @res;
+		foreach my $next (@$node) {
+			if(!$filtered)                            { push @res,$next }
+			elsif(!is_ref($next))                     { push @res,$next }
+			elsif(is_hashref($next)&&$$next{keyname}) { push @res,$$next{keyname} }
+		}
+		return @res;
+	}
+	elsif(is_hashref($node)) { return keys %$node }
+	elsif(!defined($node))   { return }
+	die 'Expected array/hash'; # only used during validation, not runtime
+}
+
+sub nextremap {
+	my ($self,$mapping)=@_;
+	if(is_arrayref($$self{next})) {
+		my @nexts=map {$$mapping{$_}} @{$$self{next}};
+		if(@nexts) { $$self{next}=\@nexts }
+		else       { delete($$self{next}) }
+	}
+	elsif(is_hashref($$self{next})) {
+		while(my ($name,$next)=each %{$$self{next}}) { $$next{node}=$$mapping{$name} }
+	}
+	return $self;
+}
+
 sub validate {
 	my (%node)=@_;
 	if($node{_valid}) { return }
@@ -71,12 +101,11 @@ sub validate {
 	}
 	if(exists($node{next})) {
 		my @nexts;
-		if   (is_arrayref($node{next})) { @nexts=@{$node{next}} }
-		elsif(is_hashref ($node{next})) { @nexts=keys %{$node{next}} }
-		else { push @errors,'Expected array/hash:  next' }
+		eval { @nexts=nextnames(undef,0,$node{next}) };
+		if($@) { push @errors,'Expected array/hash:  next' }
 		@invalids=grep {!defined($_)||is_ref($_)} @nexts;
 		if(@invalids) { push @errors,'Invalid entry in:  next' }
-		if(is_hashref ($node{next})) {
+		if(is_hashref($node{next})) {
 			my $weight=0;
 			foreach my $x (map {$$_{weight}//0} values %{$node{next}}) { $weight+=$x }
 			if($weight<=0) { push @errors,'Sum of weights must be positive' }
@@ -117,7 +146,7 @@ sub nextrandom {
 		if($opt{not}&&($opt{not} eq $next)) { next }
 		if(!is_ref($next)) { push @candidates,$next; next }
 		if(!blessed($next)) { next }
-		if($$next{require}&&$opt{attr}) {
+		if(blessed($$next{require})&&$opt{attr}) {
 			if(!$$next{require}->matches($opt{tm},%{$opt{attr}})) { next } }
 		push @candidates,$next;
 	} }

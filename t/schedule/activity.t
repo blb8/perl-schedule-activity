@@ -1104,7 +1104,7 @@ subtest 'Next node weighting'=>sub {
 	);
 	my ($steps,$maxouter)=(0,184);
 	while($steps<$maxouter) {
-		my %seen;
+		my %seen=map {$_=>0} keys(%need);
 		my %schedule=$scheduler->schedule(activities=>[[120,'start']]);
 		foreach my $msg (grep {$_} map {$$_[2]{msg}[0]} @{$schedule{activities}}) { $seen{$msg}++ }
 		if($seen{D}) { $need{D}=-1; $maxouter=$steps }
