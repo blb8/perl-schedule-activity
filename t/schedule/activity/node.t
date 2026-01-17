@@ -3,7 +3,7 @@
 use strict;
 use warnings;
 use Schedule::Activity::Node;
-use Test::More tests=>5;
+use Test::More tests=>7;
 
 subtest 'validation'=>sub {
 	plan tests=>7;
@@ -30,6 +30,34 @@ subtest 'defaulting'=>sub {
 	%node=(tmmax=>25); &$f(\%node); &$approx($node{tmmin},15,'max->min'); &$approx($node{tmavg},20,'max->avg');
 	%node=(tmmin=>15); &$f(\%node); &$approx($node{tmavg},20,'min->avg'); &$approx($node{tmmax},25,'min->max');
 	%node=(tmmin=>15,tmmax=>35); &$f(\%node);                             &$approx($node{tmavg},25,'min/max->avg');
+};
+
+subtest 'next names'=>sub {
+	plan tests=>6;
+	my $f=\&Schedule::Activity::Node::nextnames;
+	is_deeply([sort &$f(undef,undef,{one=>{},two=>{}})],         ['one','two'],'Hash');
+	is_deeply([&$f(undef,1,['one','two'])],                      ['one','two'],'Array, names');
+	is_deeply([&$f(undef,1,[{keyname=>'one'},{keyname=>'two'}])],['one','two'],'Array, hashes');
+	is_deeply([&$f(undef,1,['one',undef,[],{keyname=>'two'}])],  ['one','two'],'Array, mixed, filtered elements');
+	is_deeply([&$f(undef,0,['one',undef,[],{keyname=>'two'}])],  ['one',undef,[],{keyname=>'two'}],'Array, mixed, unfiltered');
+	is_deeply([&$f({next=>[{keyname=>'one'},{keyname=>'two'}]})],['one','two'],'Object internal {next}');
+};
+
+subtest 'next remapping'=>sub {
+	plan tests=>4;
+	my $f=\&Schedule::Activity::Node::nextremap;
+	my %mapping=(
+		one=>1, # actual mappings will be references
+		two=>2,
+		three=>3,
+		four=>4,
+	);
+	is_deeply(&$f({next=>[qw/two four/]},\%mapping),{next=>[2,4]},'Array, elements remapped');
+	is_deeply(&$f({next=>[qw/five six/]},\%mapping),{},           'Array, all undefined');
+	is_deeply(&$f({next=>{one=>{weight=>1},three=>{weight=>3}} },\%mapping),
+		{next=>{one=>{weight=>1,node=>1},three=>{weight=>3,node=>3}} },
+		'Hash, {node} populated');
+	is_deeply(&$f({next=>{five=>{weight=>1},six=>{weight=>3}} },\%mapping),{},'Hash, all undefined');
 };
 
 subtest 'slack/buffer'=>sub {

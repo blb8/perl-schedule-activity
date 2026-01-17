@@ -52,12 +52,12 @@ sub defaulting {
 
 sub nextnames {
 	my ($self,$filtered,$node)=@_;
-	$node//=$$self{next};
+	if(!defined($node)) { $node=$$self{next}; $filtered=1 }
 	if(is_arrayref($node)) {
 		my @res;
 		foreach my $next (@$node) {
 			if(!$filtered)                            { push @res,$next }
-			elsif(!is_ref($next))                     { push @res,$next }
+			elsif(defined($next)&&!is_ref($next))     { push @res,$next }
 			elsif(is_hashref($next)&&$$next{keyname}) { push @res,$$next{keyname} }
 		}
 		return @res;
@@ -70,12 +70,17 @@ sub nextnames {
 sub nextremap {
 	my ($self,$mapping)=@_;
 	if(is_arrayref($$self{next})) {
-		my @nexts=map {$$mapping{$_}} @{$$self{next}};
+		my @nexts=grep {defined($_)} map {$$mapping{$_}} @{$$self{next}};
 		if(@nexts) { $$self{next}=\@nexts }
 		else       { delete($$self{next}) }
 	}
 	elsif(is_hashref($$self{next})) {
-		while(my ($name,$next)=each %{$$self{next}}) { $$next{node}=$$mapping{$name} }
+		while(my ($name,$next)=each %{$$self{next}}) {
+			my $x=$$mapping{$name};
+			if($x) { $$next{node}=$x }
+			else   { delete($$self{next}{$name}) }
+		}
+		if(!%{$$self{next}}) { delete($$self{next}) }
 	}
 	return $self;
 }
@@ -107,7 +112,7 @@ sub validate {
 		if(@invalids) { push @errors,'Invalid entry in:  next' }
 		if(is_hashref($node{next})) {
 			my $weight=0;
-			foreach my $x (map {$$_{weight}//0} values %{$node{next}}) { $weight+=$x }
+			foreach my $x (map {$$_{weight}//1} values %{$node{next}}) { $weight+=$x }
 			if($weight<=0) { push @errors,'Sum of weights must be positive' }
 		}
 	}
