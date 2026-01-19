@@ -157,7 +157,8 @@ sub nextrandom {
 	} }
 	elsif(is_hashref($$self{next})) {
 	while(my ($next,$href)=each %{$$self{next}}) {
-		if(is_hashref($href)&&$$href{node}) {
+		if(!is_hashref($href)) { next }
+		if($$href{node}) {
 			if($opt{not}&&($opt{not} eq $$href{node})) { next }
 			if(blessed($$href{node}{require})&&$opt{attr}) {
 				if(!$$href{node}{require}->matches($opt{tm},%{$opt{attr}})) { next } } }
