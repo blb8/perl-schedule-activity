@@ -148,6 +148,6 @@ Given a plain (unknown) message configuration, find any embedded attributes.  Th
 
 =head1 BUGS
 
-As of version 0.1.2, there is very little validation of the C<names> contents.
+There is very little validation of the C<names> contents.
 
 =cut
