@@ -360,6 +360,7 @@ sub goalScheduling {
 		my %valueOp=map {$_=>undef} (qw/eq ne/);
 		foreach my $k (keys %{$goal{attribute}}) {
 			if(!defined($$attr{attr}{$k})) { return (error=>"goal-requested attribute does not exist:  $k") }
+			if(!is_hashref($goal{attribute}{$k}))  { return (error=>"goal attribute $k must be a hash") }
 			if(!defined($goal{attribute}{$k}{op})) { return (error=>"missing operator in goal $k") }
 			if(!exists($validOp{$goal{attribute}{$k}{op}//''})) { return (error=>"invalid operator in goal $k") }
 			if(exists($valueOp{$goal{attribute}{$k}{op}})&&!defined($goal{attribute}{$k}{value})) { return (error=>"missing value in goal $k") }
