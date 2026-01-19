@@ -5,7 +5,7 @@ use warnings;
 use Scalar::Util qw/looks_like_number/;
 use Ref::Util qw/is_ref/;
 
-our $VERSION='0.2.9';
+our $VERSION='0.3.0';
 
 sub new {
 	my ($ref,%schedule)=@_;

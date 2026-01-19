@@ -4,7 +4,7 @@ use strict;
 use warnings;
 use Ref::Util qw/is_hashref is_ref/;
 
-our $VERSION='0.2.9';
+our $VERSION='0.3.0';
 
 my %types=(
 	int=>{
